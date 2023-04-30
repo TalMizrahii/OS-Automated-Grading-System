@@ -16,17 +16,8 @@
 
 ### Execution
 
-```bash
-$ ./gccfind.sh [path_to_directory] [word_to_search] [-r]
-```
-where the path_to_directory is the directory you want to search in, the word_to_search is the word or pattern you want to find, and the "-r" flag indicates whether to search recursively or not.
 
-I put an example command and a test folder for the script
-
-```bash
-$ ./gccfind.sh testfolder word -r
-```
-## Part 2 - Bash: Tennis game
+## Part 2 -
 ### About
 
 
