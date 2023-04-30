@@ -7,6 +7,16 @@
 #define STANDARD_ERROR_FD 2
 
 /**
+ * Closing two files.
+ * @param fd1 The first file to close.
+ * @param fd2 The second file to close.
+ */
+void closeFiles(int fd1, int fd2) {
+    close(fd1);
+    close(fd2);
+}
+
+/**
  * An "strlen" like function to get the value of a string in chars.
  * @param str The string to evaluate.
  * @return The number of chars in the string.
@@ -51,7 +61,7 @@ int argNumCheck(int argc) {
 int openFile(char *filePath) {
     int fd;
     // If the file opened successfully, return its file descriptor number.
-    if ((fd = open(filePath, O_RDONLY)) != ERROR) {
+    if ((fd = open(filePath, O_RDONLY)) <= ERROR) {
         return fd;
     }
     // If the path wasn't a valid path, return an error.
@@ -59,16 +69,60 @@ int openFile(char *filePath) {
     exit(-1);
 }
 
-void readByteFile(int fd, char *ch){
+/**
+ * Reading one byte from a file.
+ * @param fd the file descriptor number of the file.
+ * @param ch the pointer to the char to store the result.
+ * @return the return value of the read system call.
+ */
+long readByteFile(int fd, char *ch) {
     long retVal;
-    // If the reading was successful, return.
-    if((retVal = read(fd, ch, 1)) != ERROR){
-        return;
+    // If the reading was successful, return the return value of read.
+    if ((retVal = read(fd, ch, 1)) > ERROR) {
+        return retVal;
     }
     // Otherwise, exit.
     errorPrint("CAN NOT READ FILE!");
     exit(-1);
 }
+
+int isSpace(char ch) {
+    if (ch == '\n' || ch == ' ' || ch == '\r') {
+        return 1;
+    }
+    return 0;
+}
+
+int similarEnd(int fd, char ch) {
+    do {
+        if (isSpace(ch)) {
+            continue;
+        } else {
+            return 2;
+        }
+    } while (readByteFile(fd, &ch));
+    return 3;
+}
+
+
+int isLetter(char c1) {
+    if ((c1 >= 65 && c1 <= 90) || (c1 >= 97 && c1 <= 122)) {
+        return 1;
+    }
+    return 0;
+}
+
+
+int unequal(int fd1, int fd2, char ch1, char ch2) {
+    if(isSpace(ch1)){
+
+    }
+
+    if (isLetter(ch1) && isLetter(ch2)) {
+
+    }
+}
+
 
 /**
  * Reading both files and comparing char by char if the files are similar, identical or different.
@@ -79,12 +133,26 @@ void readByteFile(int fd, char *ch){
 int readAndCompare(int fd1, int fd2) {
     // Creating chars to store the reading from the files.
     char ch1, ch2;
-    do{
-        // Read the one byte from each file.
-        readByteFile(fd1, &ch1);
-        readByteFile(fd2, &ch2);
+    // Return values from the read.
+    long x1, x2;
+    int similar = 0, identical = 1, different = 0;
+    while (1) {
+        // Read from the files one byte.
+        x1 = readByteFile(fd1, &ch1);
+        x2 = readByteFile(fd2, &ch2);
+        // If both file ended, check only for similarity flag and return it.
+        if (x1 == 0 && x2 == 0) {
+            return similar ? 3 : 1;
+        }
+        if (x1 == 0) {
+            return similarEnd(fd2, ch2);
+        }
+        if (x2 == 0) {
+            return similarEnd(fd1, ch1);
+        }
+//        if(unequal())
 
-    } while(ch1 != EOF || ch2 != EOF);
+    }
 
 }
 
@@ -103,7 +171,11 @@ int main(int argc, char *argv[]) {
     // Create two integers for the file's file descriptors.
     int fd1, fd2;
     // Open the files.
-    if ((fd1 = openFile(argv[1])) == ERROR || (fd2 = openFile(argv[2])) == ERROR) {
+    if ((fd1 = openFile(argv[1])) <= ERROR || (fd2 = openFile(argv[2])) <= ERROR) {
+        // Print error message.
+        errorPrint("CAN'T OPEN FILES");
+        // Close the files.
+        closeFiles(fd1, fd2);
         // If the opening failed, return an error.
         exit(-1);
     }
