@@ -13,6 +13,7 @@ int argNumCheck(int argc){
     return 1;
 }
 
+
 /**
  * The main function of the program.
  * @param argc the amount of arguments the system receive, should be exactly 3.
