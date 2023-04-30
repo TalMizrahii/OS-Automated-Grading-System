@@ -44,22 +44,9 @@ void errorPrint(char *errorMessage) {
  */
 void closeFiles(int fd1, int fd2) {
     if (close(fd1) <= ERROR || close(fd2) <= ERROR) {
-        errorPrint("CAN NOT CLOSE FILE");
+        errorPrint("Error in: close\n");
         exit(-1);
     }
-}
-
-/**
- * Checking if the amount of arguments are valid to 3.
- * @param argc the amount of arguments the program received.
- * @return If the value isn't 3 the program exits, 1 otherwise.
- */
-int argNumCheck(int argc) {
-    if (argc != 3) {
-        errorPrint("NOT ENOUGH ARGUMENTS!");
-        exit(-1);
-    }
-    return 1;
 }
 
 /**
@@ -72,7 +59,7 @@ int openFile(char *filePath) {
     // If the file opened successfully, return its file descriptor number.
     if ((fd = open(filePath, O_RDONLY)) <= ERROR) {
         // If the path wasn't a valid path, print an error.
-        errorPrint("NOT A VALID PATH!\n");
+        errorPrint("Error in: open\n");
         exit(-1);
     }
     return fd;
@@ -115,7 +102,7 @@ long readByteFile(int fd, char *ch) {
         return retVal;
     }
     // Otherwise, exit.
-    errorPrint("CAN NOT READ FILE!\n");
+    errorPrint("Error in: read\n");
     exit(-1);
 }
 
@@ -191,13 +178,22 @@ int identical(int fd1, int fd2) {
  */
 void openFiles(int *fd1, int *fd2, char *file1, char *file2) {
     if ((*fd1 = openFile(file1)) <= ERROR || (*fd2 = openFile(file2)) <= ERROR) {
-        // Print error message.
-        errorPrint("CAN'T OPEN FILES");
-        // Close the files.
-        closeFiles(*fd1, *fd2);
         // If the opening failed, return an error.
         exit(-1);
     }
+}
+
+/**
+ * Checking if the amount of arguments are valid to 3.
+ * @param argc the amount of arguments the program received.
+ * @return If the value isn't 3 the program exits, 1 otherwise.
+ */
+int argNumCheck(int argc) {
+    if (argc != 3) {
+        write(1, "NOT ENOUGH ARGUMENTS!\n", 23);
+        exit(-1);
+    }
+    return 1;
 }
 
 /**
