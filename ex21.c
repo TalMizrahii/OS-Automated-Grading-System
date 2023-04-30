@@ -116,6 +116,7 @@ long readByteFile(int fd, char *ch) {
     errorPrint("CAN NOT READ FILE!\n");
     exit(-1);
 }
+
 /**
  * Checking if both filed are similar.
  * @param fd1 The file descriptor number of the first file.
