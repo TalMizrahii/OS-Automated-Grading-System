@@ -189,4 +189,3 @@ int main(int argc, char *argv[]) {
     closeFiles(fd1, fd2);
     return 2;
 }
-
