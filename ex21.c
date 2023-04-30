@@ -33,12 +33,12 @@ void errorPrint(char *errorMessage) {
 /**
  * Checking if the amount of arguments are valid to 3.
  * @param argc the amount of arguments the program received.
- * @return 0 if the value isn't 3, 1 otherwise.
+ * @return If the value isn't 3 the program exits, 1 otherwise.
  */
 int argNumCheck(int argc) {
     if (argc != 3) {
         errorPrint("NOT ENOUGH ARGUMENTS!");
-        return 0;
+        exit(-1);
     }
     return 1;
 }
@@ -56,7 +56,18 @@ int openFile(char *filePath) {
     }
     // If the path wasn't a valid path, return an error.
     errorPrint("NOT A VALID PATH!");
-    return ERROR;
+    exit(-1);
+}
+
+void readByteFile(int fd, char *ch){
+    long retVal;
+    // If the reading was successful, return.
+    if((retVal = read(fd, ch, 1)) != ERROR){
+        return;
+    }
+    // Otherwise, exit.
+    errorPrint("CAN NOT READ FILE!");
+    exit(-1);
 }
 
 /**
@@ -66,6 +77,14 @@ int openFile(char *filePath) {
  * @return 1 for identical, 3 for similar and 2 otherwise.
  */
 int readAndCompare(int fd1, int fd2) {
+    // Creating chars to store the reading from the files.
+    char ch1, ch2;
+    do{
+        // Read the one byte from each file.
+        readByteFile(fd1, &ch1);
+        readByteFile(fd2, &ch2);
+
+    } while(ch1 != EOF || ch2 != EOF);
 
 }
 
@@ -80,15 +99,13 @@ int readAndCompare(int fd1, int fd2) {
  */
 int main(int argc, char *argv[]) {
     // Check if the amount of arguments is valid.
-    if (!argNumCheck(argc)) {
-        return ERROR;
-    }
+    argNumCheck(argc);
     // Create two integers for the file's file descriptors.
     int fd1, fd2;
     // Open the files.
     if ((fd1 = openFile(argv[1])) == ERROR || (fd2 = openFile(argv[2])) == ERROR) {
         // If the opening failed, return an error.
-        return ERROR;
+        exit(-1);
     }
 
 
