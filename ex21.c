@@ -113,40 +113,40 @@ int identical(int fd1, int fd2) {
     }
 }
 
-int isSpace(char ch){
-    if(ch == ' ' || ch == '\n' || ch == '\r'){
+int isSpace(char ch) {
+    if (ch == ' ' || ch == '\n' || ch == '\r') {
         return 1;
     }
     return 0;
 }
 
-char upper(char ch){
-    if(ch >= 65 && ch <= 90){
-        ch = (char)(ch + 32);
+char upper(char ch) {
+    if (ch >= 65 && ch <= 90) {
+        ch = (char) (ch + 32);
     }
     return ch;
 }
 
-int similar(int fd1, int fd2){
+int similar(int fd1, int fd2) {
     // Creating chars to store the reading from the files.
     char ch1 = 0, ch2 = 0;
-    do{
+    do {
         readByteFile(fd1, &ch1);
         readByteFile(fd2, &ch2);
 
-        while(isSpace(ch1)){
+        while (isSpace(ch1)) {
             readByteFile(fd1, &ch1);
         }
-        while(isSpace(ch2)) {
+        while (isSpace(ch2)) {
             readByteFile(fd2, &ch2);
         }
-        if(upper(ch1) != upper(ch2)){
+        if (upper(ch1) != upper(ch2)) {
             closeFiles(fd1, fd2);
             return 0;
         }
-    } while(ch1 != EOF && ch2 != EOF);
+    } while (ch1 != EOF && ch2 != EOF);
 
-    if(ch1 == EOF && ch2 == EOF){
+    if (ch1 == EOF && ch2 == EOF) {
         closeFiles(fd1, fd2);
         return 1;
     }
