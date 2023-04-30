@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+# define ERROR (-1)
 
 /**
  * Checking if the amount of arguments are valid to 3.
@@ -14,6 +18,22 @@ int argNumCheck(int argc){
 }
 
 /**
+ * This functions is trying to open a file.
+ * @param filePath The path to the file.
+ * @return The file descriptor number of the file if succeeded, -1 otherwise.
+ */
+int openFile(char *filePath){
+    int fd;
+    // If the file opened successfully, return its file descriptor number.
+    if((fd = open(filePath, O_RDONLY)) != ERROR){
+        return fd;
+    }
+    // If the path wasn't a valid path, return an error.
+    perror("NOT A VALID PATH!");
+    return ERROR;
+}
+
+/**
  * The main function of the program.
  * @param argc the amount of arguments the system receive, should be exactly 3.
  * @param argv the array of chars containing the arguments. index 0 should contain the name of the program,
@@ -24,7 +44,15 @@ int argNumCheck(int argc){
 int main(int argc, char *argv[]){
     // Check if the amount of arguments is valid.
     if(!argNumCheck(argc)){
-        return -1;
+        return ERROR;
     }
+    // Create two integers for the file's file descriptors.
+    int fd1, fd2;
+    // Open the files.
+    if((fd1 = openFile(argv[1])) == ERROR || (fd2 = openFile(argv[2])) == ERROR){
+        // If the opening failed, return an error.
+        return ERROR;
+    }
+
     return 0;
 }
