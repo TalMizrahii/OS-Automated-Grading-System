@@ -73,6 +73,25 @@ int openFile(char *filePath) {
     return fd;
 }
 
+
+
+
+
+
+int isSpace(char ch) {
+    if (ch == ' ' || ch == '\n' || ch == '\r') {
+        return 1;
+    }
+    return 0;
+}
+
+char upper(char ch) {
+    if (ch >= 65 && ch <= 90) {
+        ch = (char) (ch + 32);
+    }
+    return ch;
+}
+
 /**
  * Reading one byte from a file.
  * @param fd the file descriptor number of the file.
@@ -90,6 +109,31 @@ long readByteFile(int fd, char *ch) {
     exit(-1);
 }
 
+int similar(int fd1, int fd2) {
+    // Creating chars to store the reading from the files.
+    char ch1 = 0, ch2 = 0;
+    long x1, x2;
+    do {
+        x1 = readByteFile(fd1, &ch1);
+        x2 = readByteFile(fd2, &ch2);
+        if(x1 == 0 && x2 == 0){
+            break;
+        }
+
+        while (isSpace(ch1) && readByteFile(fd1, &ch1));
+        while (isSpace(ch2) && readByteFile(fd2, &ch2));
+
+        if (upper(ch1) != upper(ch2)) {
+            break;
+        }
+    } while (ch1 != EOF && ch2 != EOF);
+
+    closeFiles(fd1, fd2);
+    if (x1 == 0 && x2 == 0) {
+        return 1;
+    }
+    return 0;
+}
 
 int identical(int fd1, int fd2) {
     // Creating chars to store the reading from the files.
@@ -109,43 +153,6 @@ int identical(int fd1, int fd2) {
             return 0;
         }
     }
-}
-
-int isSpace(char ch) {
-    if (ch == ' ' || ch == '\n' || ch == '\r') {
-        return 1;
-    }
-    return 0;
-}
-
-char upper(char ch) {
-    if (ch >= 65 && ch <= 90) {
-        ch = (char) (ch + 32);
-    }
-    return ch;
-}
-
-int similar(int fd1, int fd2) {
-    // Creating chars to store the reading from the files.
-    char ch1 = 0, ch2 = 0;
-    do {
-        readByteFile(fd1, &ch1);
-        readByteFile(fd2, &ch2);
-
-        while (isSpace(ch1) && readByteFile(fd1, &ch1));
-        while (isSpace(ch2) && readByteFile(fd2, &ch2));
-        if (upper(ch1) != upper(ch2)) {
-            closeFiles(fd1, fd2);
-            return 0;
-        }
-    } while (ch1 != EOF && ch2 != EOF);
-
-    if (ch1 == EOF && ch2 == EOF) {
-        closeFiles(fd1, fd2);
-        return 1;
-    }
-    closeFiles(fd1, fd2);
-    return 0;
 }
 
 void openFiles(int *fd1, int *fd2, char *file1, char *file2) {
@@ -181,6 +188,5 @@ int main(int argc, char *argv[]) {
     if (similar(fd1, fd2)) {
         return 3;
     }
-    closeFiles(fd1, fd2);
     return 2;
 }
