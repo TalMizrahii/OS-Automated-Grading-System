@@ -4,9 +4,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 #define ERROR (-1)
 #define STANDARD_ERROR_FD 2
+#define MAX_PATH 150
+#define ONE_BYTE 1
 
 /**
  * An "strlen" like function to get the value of a string in chars.
@@ -51,12 +54,42 @@ int argNumCheck(int argc) {
  * @param pathToFile The path to the file.
  * @return The value to the file descriptor of the file.
  */
-int openFile(char *pathToFile) {
-    int fd = open(pathToFile, O_RDONLY);
+int openFilePath(char *pathToFile, int flag) {
+    int fd = open(pathToFile, flag);
     if (fd <= ERROR) {
-
+        errorPrint("Error in: open\n");
+        exit(1);
     }
+    return fd;
+}
 
+/**
+ * Reading a line from the configuration file, assuming each line ends with '\n' character.
+ * @param line The line to read to for storing.
+ * @param fd The file descriptor number of the configuration file.
+ */
+void readToLine(char *line, int fd) {
+    // Initiate a char and read one byte from the file.
+    char ch;
+    read(fd, &ch, ONE_BYTE);
+    // While the char isn't a new line char or EOF, concatenate the char to the line string.
+    while (ch != '\n' && ch != EOF) {
+        strcat(line, &ch);
+        read(fd, &ch, ONE_BYTE);
+    }
+}
+
+/**
+ * A control flow function to read the configuration file by calling readToLine three times.
+ * @param line1 The first line in the file contains the path to the users directory.
+ * @param line2 The second line of the file contains the path to the input file.
+ * @param line3 The third path to the file contais the path to the
+ * @param fd
+ */
+void readConfiguration(char *line1, char *line2, char *line3, int fd) {
+    readToLine(line1, fd);
+    readToLine(line2, fd);
+    readToLine(line3, fd);
 }
 
 /**
@@ -68,6 +101,14 @@ int openFile(char *pathToFile) {
 int main(int argc, char *argv[]) {
     // Check if the amount of arguments is valid.
     argNumCheck(argc);
+    // Open the configuration file.
+    int confFd = openFilePath(argv[1], O_RDONLY);
+    // Initiate three strings to store the lines from the configuration file.
+    char folderPath[MAX_PATH], inputFilePath[MAX_PATH], outputFilePath[MAX_PATH];
+    // Get the lines from the configuration file.
+    readConfiguration(folderPath, inputFilePath, outputFilePath, confFd);
+    // Open the output file using the path we extracted from the configuration file.
+    int outputFd = openFilePath(outputFilePath, O_RDONLY);
 
 
 }
