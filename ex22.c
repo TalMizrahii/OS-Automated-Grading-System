@@ -111,6 +111,24 @@ DIR *openDirectory(char *path) {
 }
 
 /**
+ * Opening the input or output files from the configuration file.
+ * @param path The path to the files.
+ * @param errorMsg The error message if the action failed.
+ * @return The file descriptor of the file.
+ */
+int openOutputInput(char * path, char *errorMsg){
+    // Open the file.
+    int fd = open(path, O_RDONLY);
+    // If the action failed, print an error.
+    if (fd <= ERROR) {
+        write(1, errorMsg, strLength(errorMsg));
+        exit(1);
+    }
+    // Return the file descriptor of the file.
+    return fd;
+}
+
+/**
  *
  * @param argc
  * @param argv
@@ -130,5 +148,7 @@ int main(int argc, char *argv[]) {
     // Open the directory from the first line of the configuration file.
     DIR *usersDir = openDirectory(folderPath);
     // Open the output file using the path we extracted from the configuration file.
-    int outputFd = openFilePath(outputFilePath, O_RDONLY);
+    int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
+    // Open the output file using the path we extracted from the configuration file.
+    int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
 }
