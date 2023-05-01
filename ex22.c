@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <dirent.h>
 
 #define ERROR (-1)
 #define STANDARD_ERROR_FD 2
@@ -93,6 +94,23 @@ void readConfiguration(char *line1, char *line2, char *line3, int fd) {
 }
 
 /**
+ * Opening a directory. If it does not exist, we print a specific error message.
+ * @param path The path to the directory.
+ * @return The pointer to the directory data type.
+ */
+DIR *openDirectory(char *path) {
+    // Declare a pointer to a directory.
+    DIR *dir;
+    // Try to open it.
+    if ((dir = opendir(path))) {
+        return dir;
+    }
+    // Print an error if failed and exit.
+    write(1, "Not a valid directory\n", 22);
+    exit(-1);
+}
+
+/**
  *
  * @param argc
  * @param argv
@@ -109,7 +127,8 @@ int main(int argc, char *argv[]) {
     char outputFilePath[MAX_PATH] = {0};
     // Get the lines from the configuration file.
     readConfiguration(folderPath, inputFilePath, outputFilePath, confFd);
+    // Open the directory from the first line of the configuration file.
+    DIR *usersDir = openDirectory(folderPath);
     // Open the output file using the path we extracted from the configuration file.
     int outputFd = openFilePath(outputFilePath, O_RDONLY);
-
 }
