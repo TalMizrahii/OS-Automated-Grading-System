@@ -129,13 +129,36 @@ int openOutputInput(char * path, char *errorMsg){
 }
 
 
-void traverse(DIR * dir){
+void traverse(DIR * dir, char* pathToDir){
+
+
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
         // Ignore the current and parent directories
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
+
+        // Construct the full path of the entry.
+        char full_path[MAX_PATH];
+        strcpy(full_path, pathToDir);
+        strcat(full_path, "/");
+        strcat(full_path, entry->d_name);
+
+        // Check if the entry is a directory.
+        struct stat statbuf;
+        if (stat(full_path, &statbuf) == -1) {
+            perror("stat");
+            continue;
+        }
+        if (S_ISDIR(statbuf.st_mode)) {
+            // Recursively traverse the subdirectory
+            traverse(full_path);
+        }
+
+        // Process the entry here (it's not a directory)
+        printf("%s\n", full_path);
+    }
     }
 }
 
