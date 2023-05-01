@@ -128,6 +128,17 @@ int openOutputInput(char * path, char *errorMsg){
     return fd;
 }
 
+
+void traverse(DIR * dir){
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        // Ignore the current and parent directories
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+    }
+}
+
 /**
  *
  * @param argc
@@ -151,4 +162,6 @@ int main(int argc, char *argv[]) {
     int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
     // Open the output file using the path we extracted from the configuration file.
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
+
+
 }
