@@ -103,12 +103,18 @@ int main(int argc, char *argv[]) {
     argNumCheck(argc);
     // Open the configuration file.
     int confFd = openFilePath(argv[1], O_RDONLY);
-    // Initiate three strings to store the lines from the configuration file.
-    char folderPath[MAX_PATH], inputFilePath[MAX_PATH], outputFilePath[MAX_PATH];
+    // Initiate three strings, all 0, to store the lines from the configuration file.
+    char folderPath[MAX_PATH] = {0};
+    char inputFilePath[MAX_PATH] = {0};
+    char outputFilePath[MAX_PATH] = {0};
     // Get the lines from the configuration file.
     readConfiguration(folderPath, inputFilePath, outputFilePath, confFd);
+
+    printf("%s\n", folderPath);
+    printf("%s\n", inputFilePath);
+    printf("%s\n", outputFilePath);
     // Open the output file using the path we extracted from the configuration file.
-    int outputFd = openFilePath(outputFilePath, O_RDONLY);
+    //int outputFd = openFilePath(outputFilePath, O_RDONLY);
 
 
 }
