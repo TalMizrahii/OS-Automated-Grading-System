@@ -109,12 +109,7 @@ int main(int argc, char *argv[]) {
     char outputFilePath[MAX_PATH] = {0};
     // Get the lines from the configuration file.
     readConfiguration(folderPath, inputFilePath, outputFilePath, confFd);
-
-    printf("%s\n", folderPath);
-    printf("%s\n", inputFilePath);
-    printf("%s\n", outputFilePath);
     // Open the output file using the path we extracted from the configuration file.
-    //int outputFd = openFilePath(outputFilePath, O_RDONLY);
-
+    int outputFd = openFilePath(outputFilePath, O_RDONLY);
 
 }
