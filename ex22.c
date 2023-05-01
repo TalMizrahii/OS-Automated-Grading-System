@@ -51,9 +51,9 @@ int argNumCheck(int argc) {
  * @param pathToFile The path to the file.
  * @return The value to the file descriptor of the file.
  */
-int openFile(char *pathToFile){
+int openFile(char *pathToFile) {
     int fd = open(pathToFile, O_RDONLY);
-    if(fd < 0){
+    if (fd <= ERROR) {
 
     }
 
@@ -68,5 +68,6 @@ int openFile(char *pathToFile){
 int main(int argc, char *argv[]) {
     // Check if the amount of arguments is valid.
     argNumCheck(argc);
+
 
 }
