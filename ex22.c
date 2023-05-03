@@ -202,7 +202,7 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
     return 0;
 }
 
-int compileCFile(char *pathToCFile) {
+int compileCFile(char *pathToCFile, char* userDirPath) {
     int status;
     pid_t pid;
     pid = fork();
@@ -211,19 +211,21 @@ int compileCFile(char *pathToCFile) {
         exit(-1);
     }
     if(pid == CHILD_PROCESS){
-        char* argumentList[] = {"gcc", pathToCFile, NULL}; // NULL terminated array of char* strings
+        // Create a path to the execution file.
+        char fullPathToExec[MAX_PATH];
+        // Copy the path to the directory.
+        strcpy(fullPathToExec, userDirPath);
+        // Concatenate the a.out execution name.
+        strcat(fullPathToExec, "/a.out");
+        // Compile the
+        char* argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
         if(execvp("gcc", argumentList) <= ERROR){
             writeToScreen("Error in: execvp\n");
-            printf("\n1\n");
             exit(-1);
         }
-        printf("\n2\n");
-        exit(1);
     }
     else{
         wait(&status);
-        status /= 256;
-        printf("status = %d\n", status);
     }
 }
 
@@ -254,7 +256,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
             continue; // IF NO C FILE DO SOMTHING!
         }
         printf("--%s\n", cFilePath);
-        compileCFile(cFilePath);
+        compileCFile(cFilePath, userDirPath);
     }
 
 
@@ -291,5 +293,7 @@ int main(int argc, char *argv[]) {
 
 
     traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd, errorFd);
+
+    return 0;
 
 }
