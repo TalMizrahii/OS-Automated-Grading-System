@@ -1,2 +1,2 @@
-Please enter two numbers
+numbers
 10

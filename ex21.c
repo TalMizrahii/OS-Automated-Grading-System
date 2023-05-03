@@ -71,7 +71,7 @@ int openFile(char *filePath) {
  * @return 1 if it is, 0 otherwise.
  */
 int isSpace(char ch) {
-    if (ch == ' ' || ch == '\n' || ch == '\r') {
+    if (ch == ' ' || ch == '\n' || ch == '\r' || ch== '0') {
         return 1;
     }
     return 0;

@@ -331,6 +331,7 @@ int compareFiles(char *userDirPath, char *outputPath) {
         exit(1);
     } else {
         wait(&status);
+        printf("path: %s\nval = %d\n", userDirPath, status / 256);
         return !status;
     }
 
@@ -364,12 +365,12 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, char *outputPath, 
         // Create an array to store the path to the execution file.
         char fullPathToExec[MAX_PATH] = {0};
         // Compile the file.
-        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
-            // If the compilation didn't work.
-            writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
-            continue;
-        }
-        runExecFile(userDirPath, inputFd);
+//        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
+//            // If the compilation didn't work.
+//            writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
+//            continue;
+//        }
+//        runExecFile(userDirPath, inputFd);
         compareFiles(userDirPath, outputPath);
     }
 }
