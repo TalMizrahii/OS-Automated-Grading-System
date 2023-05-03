@@ -70,13 +70,14 @@ int argNumCheck(int argc) {
  * The function receive a path to a file an opens it with the "open" system call.
  * If the opening failed, the program close.
  * @param pathToFile The path to the file.
+ * @param flag The flag of file opening (O_RDONLY, etc.).
  * @return The value to the file descriptor of the file.
  */
 int openFilePath(char *pathToFile, int flag) {
     int fd = open(pathToFile, flag);
     if (fd <= ERROR) {
         writeToScreen("Error in: open\n");
-        exit(1);
+        exit(-1);
     }
     return fd;
 }
@@ -146,7 +147,7 @@ int openOutputInput(char *path, char *errorMsg) {
     // If the action failed, print an error.
     if (fd <= ERROR) {
         writeToScreen(errorMsg);
-        exit(1);
+        exit(-1);
     }
     // Return the file descriptor of the file.
     return fd;
@@ -160,7 +161,7 @@ int createResultFile() {
     int resultFd = open("results.csv", O_CREAT | O_TRUNC | O_WRONLY, ALL_ACCESS);
     if (resultFd <= ERROR) {
         writeToScreen("Error in: open\n");
-        exit(1);
+        exit(-1);
     }
     return resultFd;
 }
@@ -173,7 +174,7 @@ int createErrorFile() {
     int errorFd = open("errors.txt", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
     if (errorFd <= ERROR) {
         writeToScreen("Error in: open\n");
-        exit(1);
+        exit(-1);
     }
     // Redirect stderr to the file descriptor of errors.txt.
     if (dup2(errorFd, STDERR_FILENO) <= ERROR) {
@@ -267,7 +268,18 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
 }
 
 
-void runExecFile(char* fullPathToExec, int inputFd, int outputFd){
+int createComparisonFile(char* fullPathToExec){
+    char fullPathToCompTxt[MAX_PATH] = {0};
+    strcpy(fullPathToCompTxt, fullPathToExec);
+    strcat(fullPathToCompTxt, "/textComp.txt");
+    int testFd = open(".txt", O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
+    if (testFd <= ERROR) {
+        writeToScreen("Error in: open\n");
+        exit(-1);
+    }
+}
+
+void runExecFile(char* fullPathToExec, char* userDirPath, int inputFd, int outputFd){
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
@@ -280,6 +292,9 @@ void runExecFile(char* fullPathToExec, int inputFd, int outputFd){
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
+
+        dup2(inputFd, 0);
+
 
     } else {
         wait(&status);
@@ -300,7 +315,6 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
         if (entry->d_type != 4 || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-
         // Construct the full path of the user's directory.
         char userDirPath[MAX_PATH] = {0};
         strcpy(userDirPath, pathToDir);
@@ -320,7 +334,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
         }
-        runExecFile(fullPathToExec, inputFd, outputFd);
+        runExecFile(fullPathToExec, userDirPath, inputFd, outputFd);
     }
 }
 
