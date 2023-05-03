@@ -143,6 +143,7 @@ int similar(int fd1, int fd2) {
     return 0;
 }
 
+
 /**
  * Checking if both filed are identical.
  * @param fd1 The file descriptor number of the first file.
