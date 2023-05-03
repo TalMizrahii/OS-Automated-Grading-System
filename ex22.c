@@ -24,6 +24,34 @@ void writeToScreen(char *msg) {
     }
 }
 
+/**
+ * Writing to a results file a string created from data regard to a users score.
+ * @param resultsFd The file descriptor of the results file.
+ * @param name The name of the user.
+ * @param score The score he received.
+ * @param cause The cause of the score.
+ */
+void writeToResults(int resultsFd, char *name, char *score, char *cause) {
+    // Declare an array of chars to store the result.
+    char userResult[MAX_PATH] = {0};
+    // Copy the name to the full content array.
+    strcpy(userResult, name);
+    // Add comma to separate the columns.
+    strcat(userResult, ",");
+    // Concatenate the score.
+    strcat(userResult, score);
+    // Add comma to separate the columns.
+    strcat(userResult, ",");
+    // Concatenate the cause of the score.
+    strcat(userResult, cause);
+    // Add "\n" to indicate the end of the line.
+    strcat(userResult, "\n");
+    // write to the file and check for an error.
+    if (write(resultsFd, userResult, strlen(userResult)) <= ERROR) {
+        exit(-1);
+    }
+}
+
 
 /**
  * Checking if the amount of arguments are valid to 3.
@@ -172,8 +200,6 @@ int validC(char *fileName) {
 }
 
 
-
-
 /**
  * Given a path to a user directory, the function is traversing all files looking for a .c file.
  * If it finds one, the function construct a full path to this file and saves it in a given array.
@@ -202,29 +228,60 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
     return 0;
 }
 
-int compileCFile(char *pathToCFile, char* userDirPath) {
+
+int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
+    // Create a status int to save the exit status of the child.
     int status;
+    // Fork the process to execute the gcc command.
     pid_t pid;
     pid = fork();
-    if(pid <= ERROR){
+    // Validate no error occur.
+    if (pid <= ERROR) {
         writeToScreen("Error in: fork\n");
         exit(-1);
     }
-    if(pid == CHILD_PROCESS){
-        // Create a path to the execution file.
-        char fullPathToExec[MAX_PATH];
-        // Copy the path to the directory.
+    // If it;s the child process.
+    if (pid == CHILD_PROCESS) {
+        // // Create a path to the execution file by Coping the path to the directory.
         strcpy(fullPathToExec, userDirPath);
         // Concatenate the a.out execution name.
-        strcat(fullPathToExec, "/a.out");
-        // Compile the
-        char* argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
-        if(execvp("gcc", argumentList) <= ERROR){
+        strcat(fullPathToExec, "/");
+        strcat(fullPathToExec, execName);
+        // Compile the program.
+        char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
+        // Execute the compilation line.
+        if (execvp("gcc", argumentList) <= ERROR) {
             writeToScreen("Error in: execvp\n");
             exit(-1);
         }
+        exit(1);
+    } else {
+        wait(&status);
     }
-    else{
+    // Check if the compilation phase succeeded. If so, return 1.
+    if (status == 0) {
+        return 1;
+    }
+    // If the status isn't 0, it means that the file did not compile.
+    return 0;
+}
+
+
+void runExecFile(char* fullPathToExec, int inputFd, int outputFd){
+    // Create a status int to save the exit status of the child.
+    int status;
+    // Fork the process to execute the gcc command.
+    pid_t pid;
+    pid = fork();
+    // Validate no error occur.
+    if (pid <= ERROR) {
+        writeToScreen("Error in: fork\n");
+        exit(-1);
+    }
+    // If it;s the child process.
+    if (pid == CHILD_PROCESS) {
+
+    } else {
         wait(&status);
     }
 }
@@ -234,7 +291,7 @@ int compileCFile(char *pathToCFile, char* userDirPath) {
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd, int errorFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -252,14 +309,19 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
         // Create a string for the .c file inside the directory.
         char cFilePath[MAX_PATH] = {0};
         // Search for a .c file in the user's directory.
-        if(!findCFileInUsers(userDirPath, cFilePath)){
+        if (!findCFileInUsers(userDirPath, cFilePath)) {
             continue; // IF NO C FILE DO SOMTHING!
         }
-        printf("--%s\n", cFilePath);
-        compileCFile(cFilePath, userDirPath);
+        // Create an array to store the path to the execution file.
+        char fullPathToExec[MAX_PATH] = {0};
+        // Compile the file.
+        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
+            // If the compilation didn't work.
+            writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
+            continue;
+        }
+        runExecFile(fullPathToExec, inputFd, outputFd);
     }
-
-
 }
 
 
@@ -291,8 +353,7 @@ int main(int argc, char *argv[]) {
     // Create result file named results.csv.
     int resultsFd = createResultFile();
 
-
-    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd, errorFd);
+    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
 
     return 0;
 
