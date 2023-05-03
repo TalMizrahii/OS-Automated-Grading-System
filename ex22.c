@@ -260,23 +260,21 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
         wait(&status);
     }
     // Check if the compilation phase succeeded. If so, return 1.
-    if (status == 0) {
-        return 1;
-    }
-    // If the status isn't 0, it means that the file did not compile.
-    return 0;
+    return !status;
 }
 
 
-int createComparisonFile(char* fullPathToExec){
+int redirectComparisonFile(char* userDirPath, int inputFd, int outPutFd){
     char fullPathToCompTxt[MAX_PATH] = {0};
-    strcpy(fullPathToCompTxt, fullPathToExec);
-    strcat(fullPathToCompTxt, "/textComp.txt");
+    strcpy(fullPathToCompTxt, userDirPath);
+    strcat(fullPathToCompTxt, "/testComp.txt");
     int testFd = open(".txt", O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
     if (testFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(-1);
     }
+    dup2(inputFd, STDIN_FILENO);
+    dup2(outPutFd, STDOUT_FILENO);
 }
 
 void runExecFile(char* fullPathToExec, char* userDirPath, int inputFd, int outputFd){
@@ -292,10 +290,15 @@ void runExecFile(char* fullPathToExec, char* userDirPath, int inputFd, int outpu
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-
-        dup2(inputFd, 0);
-
-
+        redirectComparisonFile(userDirPath, inputFd, outputFd);
+        chdir(userDirPath);
+        char* argumentList[] = {"./a.out", NULL};
+        // Execute the compiled file.
+        if (execvp("./a.out", argumentList) <= ERROR) {
+            writeToScreen("Error in: execvp\n");
+            exit(-1);
+        }
+        exit(1);
     } else {
         wait(&status);
     }
