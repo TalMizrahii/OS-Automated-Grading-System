@@ -1,4 +1,0 @@
-/home/tal/Desktop/ex2/files/students
-/home/tal/Desktop/ex2/files/io/input.txt
-/home/tal/Desktop/ex2/files/io/correct_output.txt
-
