@@ -13,19 +13,29 @@
 #define ALL_ACCESS 0777
 
 /**
- * An "strlen" like function to get the value of a string in chars.
- * @param str The string to evaluate.
- * @return The number of chars in the string.
+ * A function to write to the default output (screen).
+ * @param msg The message to print.
  */
-int strLength(const char *str) {
-    int count = 0;
-    const char *c = str;
-    while (*c != '\0') {
-        count++;
-        c++;
+void writeToScreen(char * msg){
+    if(write(STDOUT_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR){
+        exit(-1);
     }
-    return count;
 }
+
+///**
+// * An "strlen" like function to get the value of a string in chars.
+// * @param str The string to evaluate.
+// * @return The number of chars in the string.
+// */
+//int strLength(const char *str) {
+//    int count = 0;
+//    const char *c = str;
+//    while (*c != '\0') {
+//        count++;
+//        c++;
+//    }
+//    return count;
+//}
 
 /**
  * Checking if the amount of arguments are valid to 3.
@@ -34,7 +44,7 @@ int strLength(const char *str) {
  */
 int argNumCheck(int argc) {
     if (argc != 2) {
-        perror("NOT ENOUGH ARGUMENTS!\n");
+        writeToScreen("NOT ENOUGH ARGUMENTS!\n");
         exit(-1);
     }
     return 1;
@@ -49,7 +59,7 @@ int argNumCheck(int argc) {
 int openFilePath(char *pathToFile, int flag) {
     int fd = open(pathToFile, flag);
     if (fd <= ERROR) {
-        perror("Error in: open\n");
+        writeToScreen("Error in: open\n");
         exit(1);
     }
     return fd;
@@ -65,14 +75,14 @@ void readToLine(char *line, int fd) {
     char ch;
     // Check if the command succeeded.
     if (read(fd, &ch, ONE_BYTE) <= ERROR) {
-        perror("Error in: read\n");
+        writeToScreen("Error in: read\n");
         exit(-1);
     }
     // While the char isn't a new line char or EOF, concatenate the char to the line string.
     while (ch != '\n' && ch != EOF) {
         strcat(line, &ch);
         if (read(fd, &ch, ONE_BYTE) <= ERROR) {
-            perror("Error in: read\n");
+            writeToScreen("Error in: read\n");
             exit(-1);
         }
     }
@@ -104,7 +114,7 @@ DIR *openDirectory(char *path) {
         return dir;
     }
     // Print an error if failed and exit.
-    write(STDOUT_FILENO, "Not a valid directory\n", 22);
+    writeToScreen("Not a valid directory\n");
     exit(-1);
 }
 
@@ -119,7 +129,7 @@ int openOutputInput(char *path, char *errorMsg) {
     int fd = open(path, O_RDONLY);
     // If the action failed, print an error.
     if (fd <= ERROR) {
-        write(1, errorMsg, strLength(errorMsg));
+        writeToScreen(errorMsg);
         exit(1);
     }
     // Return the file descriptor of the file.
@@ -133,7 +143,7 @@ int openOutputInput(char *path, char *errorMsg) {
 int createResultFile() {
     int resultFd = open("results.csv", O_CREAT | O_TRUNC | O_WRONLY, ALL_ACCESS);
     if (resultFd <= ERROR) {
-        perror("Error in: open\n");
+        writeToScreen("Error in: open\n");
         exit(1);
     }
     return resultFd;
@@ -146,12 +156,12 @@ int createResultFile() {
 int createErrorFile() {
     int errorFd = open("errors.csv", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
     if (errorFd <= ERROR) {
-        perror("Error in: open\n");
+        writeToScreen("Error in: open\n");
         exit(1);
     }
     // Redirect stderr to the file descriptor of errors.txt.
     if (dup2(errorFd, STDERR_FILENO) <= ERROR) {
-        perror("Error in: dup2\n");
+        writeToScreen("Error in: dup2\n");
         exit(-1);
     }
     return errorFd;
@@ -219,6 +229,4 @@ int main(int argc, char *argv[]) {
 
 
     traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
-
-
 }
