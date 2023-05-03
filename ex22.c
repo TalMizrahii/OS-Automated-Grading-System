@@ -8,9 +8,9 @@
 #include <dirent.h>
 
 #define ERROR (-1)
-#define STANDARD_ERROR_FD 2
-#define MAX_PATH 150
+#define MAX_PATH 200
 #define ONE_BYTE 1
+#define ALL_ACCESS 0777
 
 /**
  * An "strlen" like function to get the value of a string in chars.
@@ -28,22 +28,13 @@ int strLength(const char *str) {
 }
 
 /**
- * A "perror" like function to write to the Standard error (diagnostic) output.
- * @param errorMessage The message to print.
- */
-void errorPrint(char *errorMessage) {
-    int charNum = strLength(errorMessage);
-    write(STANDARD_ERROR_FD, errorMessage, charNum * sizeof(char));
-}
-
-/**
  * Checking if the amount of arguments are valid to 3.
  * @param argc the amount of arguments the program received.
  * @return If the value isn't 3 the program exits, 1 otherwise.
  */
 int argNumCheck(int argc) {
     if (argc != 2) {
-        errorPrint("NOT ENOUGH ARGUMENTS!");
+        perror("NOT ENOUGH ARGUMENTS!\n");
         exit(-1);
     }
     return 1;
@@ -58,7 +49,7 @@ int argNumCheck(int argc) {
 int openFilePath(char *pathToFile, int flag) {
     int fd = open(pathToFile, flag);
     if (fd <= ERROR) {
-        errorPrint("Error in: open\n");
+        perror("Error in: open\n");
         exit(1);
     }
     return fd;
@@ -72,11 +63,18 @@ int openFilePath(char *pathToFile, int flag) {
 void readToLine(char *line, int fd) {
     // Initiate a char and read one byte from the file.
     char ch;
-    read(fd, &ch, ONE_BYTE);
+    // Check if the command succeeded.
+    if (read(fd, &ch, ONE_BYTE) <= ERROR) {
+        perror("Error in: read\n");
+        exit(-1);
+    }
     // While the char isn't a new line char or EOF, concatenate the char to the line string.
     while (ch != '\n' && ch != EOF) {
         strcat(line, &ch);
-        read(fd, &ch, ONE_BYTE);
+        if (read(fd, &ch, ONE_BYTE) <= ERROR) {
+            perror("Error in: read\n");
+            exit(-1);
+        }
     }
 }
 
@@ -106,7 +104,7 @@ DIR *openDirectory(char *path) {
         return dir;
     }
     // Print an error if failed and exit.
-    write(1, "Not a valid directory\n", 22);
+    write(STDOUT_FILENO, "Not a valid directory\n", 22);
     exit(-1);
 }
 
@@ -116,7 +114,7 @@ DIR *openDirectory(char *path) {
  * @param errorMsg The error message if the action failed.
  * @return The file descriptor of the file.
  */
-int openOutputInput(char * path, char *errorMsg){
+int openOutputInput(char *path, char *errorMsg) {
     // Open the file.
     int fd = open(path, O_RDONLY);
     // If the action failed, print an error.
@@ -128,14 +126,55 @@ int openOutputInput(char * path, char *errorMsg){
     return fd;
 }
 
+/**
+ * Creating a file named results.scv to store the results of the program.
+ * @return If succeeded, the file descriptor of the file. If not, the program prints an error and exits.
+ */
+int createResultFile() {
+    int resultFd = open("results.csv", O_CREAT | O_TRUNC | O_WRONLY, ALL_ACCESS);
+    if (resultFd <= ERROR) {
+        perror("Error in: open\n");
+        exit(1);
+    }
+    return resultFd;
+}
 
-void traverse(DIR * dir, char* pathToDir){
+/**
+ * Creating a file named results.scv to store the results of the program.
+ * @return If succeeded, the file descriptor of the file. If not, the program prints an error and exits.
+ */
+int createErrorFile() {
+    int errorFd = open("errors.csv", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
+    if (errorFd <= ERROR) {
+        perror("Error in: open\n");
+        exit(1);
+    }
+    // Redirect stderr to the file descriptor of errors.txt.
+    if (dup2(errorFd, STDERR_FILENO) <= ERROR) {
+        perror("Error in: dup2\n");
+        exit(-1);
+    }
+    return errorFd;
+}
 
 
-    struct dirent* entry;
+void compileCFile(char *pathToUserDir) {
+
+
+}
+
+/**
+ *
+ * @param dir
+ * @param pathToDir
+ */
+void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd) {
+    // Initiate a dirnet to store the data on each file in the directory to traverse.
+    struct dirent *entry;
+    // go over all files in the directory.
     while ((entry = readdir(dir)) != NULL) {
-        // Ignore the current and parent directories
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+        // Ignore the current, parent directories, and all files different from d_type 4 witch is a directory.
+        if (entry->d_type != 4 || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
 
@@ -145,22 +184,10 @@ void traverse(DIR * dir, char* pathToDir){
         strcat(full_path, "/");
         strcat(full_path, entry->d_name);
 
-        // Check if the entry is a directory.
-        struct stat statbuf;
-        if (stat(full_path, &statbuf) == -1) {
-            perror("stat");
-            continue;
-        }
-        if (S_ISDIR(statbuf.st_mode)) {
-            // Recursively traverse the subdirectory
-            traverse(full_path);
-        }
-
-        // Process the entry here (it's not a directory)
         printf("%s\n", full_path);
     }
-    }
 }
+
 
 /**
  *
@@ -171,20 +198,27 @@ void traverse(DIR * dir, char* pathToDir){
 int main(int argc, char *argv[]) {
     // Check if the amount of arguments is valid.
     argNumCheck(argc);
+    // Redirecting all errors to a new file called errors.txt.
+    int errorFd = createErrorFile();
     // Open the configuration file.
     int confFd = openFilePath(argv[1], O_RDONLY);
     // Initiate three strings, all 0, to store the lines from the configuration file.
-    char folderPath[MAX_PATH] = {0};
+    char usersFolderPath[MAX_PATH] = {0};
     char inputFilePath[MAX_PATH] = {0};
     char outputFilePath[MAX_PATH] = {0};
     // Get the lines from the configuration file.
-    readConfiguration(folderPath, inputFilePath, outputFilePath, confFd);
+    readConfiguration(usersFolderPath, inputFilePath, outputFilePath, confFd);
     // Open the directory from the first line of the configuration file.
-    DIR *usersDir = openDirectory(folderPath);
+    DIR *usersDir = openDirectory(usersFolderPath);
     // Open the output file using the path we extracted from the configuration file.
     int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
     // Open the output file using the path we extracted from the configuration file.
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
+    // Create result file named results.csv.
+    int resultsFd = createResultFile();
+
+
+    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
 
 
 }
