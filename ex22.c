@@ -6,36 +6,24 @@
 #include <fcntl.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/wait.h>
 
 #define ERROR (-1)
 #define MAX_PATH 200
 #define ONE_BYTE 1
 #define ALL_ACCESS 0777
+#define CHILD_PROCESS 0
 
 /**
  * A function to write to the default output (screen).
  * @param msg The message to print.
  */
-void writeToScreen(char * msg){
-    if(write(STDOUT_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR){
+void writeToScreen(char *msg) {
+    if (write(STDOUT_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR) {
         exit(-1);
     }
 }
 
-///**
-// * An "strlen" like function to get the value of a string in chars.
-// * @param str The string to evaluate.
-// * @return The number of chars in the string.
-// */
-//int strLength(const char *str) {
-//    int count = 0;
-//    const char *c = str;
-//    while (*c != '\0') {
-//        count++;
-//        c++;
-//    }
-//    return count;
-//}
 
 /**
  * Checking if the amount of arguments are valid to 3.
@@ -154,7 +142,7 @@ int createResultFile() {
  * @return If succeeded, the file descriptor of the file. If not, the program prints an error and exits.
  */
 int createErrorFile() {
-    int errorFd = open("errors.csv", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
+    int errorFd = open("errors.txt", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
     if (errorFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(1);
@@ -168,9 +156,68 @@ int createErrorFile() {
 }
 
 
-void compileCFile(char *pathToUserDir) {
+/**
+ * Checking if a file is a valid .c file.
+ * @param fileName The file's name.
+ * @return 1 if the file ends with .c, 0 otherwise.
+ */
+int validC(char *fileName) {
+    // Check if the file's last char is 'c' and the next to last is '.'.
+    if (fileName[strlen(fileName) - 1] == 'c' && fileName[strlen(fileName) - 2] == '.') {
+        // This is a .c file.
+        return 1;
+    }
+    // It's not a .c file.
+    return 0;
+}
 
 
+
+
+/**
+ * Given a path to a user directory, the function is traversing all files looking for a .c file.
+ * If it finds one, the function construct a full path to this file and saves it in a given array.
+ * @param pathToUserDir The path to the user directory.
+ * @param cFilePath An array to save the full path to the .c file (if found).
+ * @return 1 if it found a .c file, 0 otherwise.
+ */
+int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
+    // Open the user's directory.
+    DIR *directory = opendir(pathToUserDir);
+    struct dirent *entry;
+    // Traverse all files inside it.
+    while ((entry = readdir(directory)) != NULL) {
+        if (entry->d_type == DT_REG && validC(entry->d_name)) {
+            // Construct the full path of the entry.
+            strcpy(cFilePath, pathToUserDir);
+            strcat(cFilePath, "/");
+            strcat(cFilePath, entry->d_name);
+            // found a .c file.
+            closedir(directory);
+            return 1;
+        }
+    }
+    // Didn't find a .c file.
+    closedir(directory);
+    return 0;
+}
+
+int compileCFile(char *pathToCFile) {
+    int status;
+    pid_t pid;
+    pid = fork();
+    if(pid <= ERROR){
+        writeToScreen("Error in: fork\n");
+        exit(-1);
+    }
+    if(pid == CHILD_PROCESS){
+        char* argumentList[] = {"gcc", pathToCFile, NULL}; // NULL terminated array of char* strings
+        execvp("gcc", argumentList);
+
+    }
+    else{
+        wait(&status);
+    }
 }
 
 /**
@@ -178,7 +225,7 @@ void compileCFile(char *pathToUserDir) {
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd, int errorFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -188,14 +235,22 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
             continue;
         }
 
-        // Construct the full path of the entry.
-        char full_path[MAX_PATH];
-        strcpy(full_path, pathToDir);
-        strcat(full_path, "/");
-        strcat(full_path, entry->d_name);
-
-        printf("%s\n", full_path);
+        // Construct the full path of the user's directory.
+        char userDirPath[MAX_PATH] = {0};
+        strcpy(userDirPath, pathToDir);
+        strcat(userDirPath, "/");
+        strcat(userDirPath, entry->d_name);
+        // Create a string for the .c file inside the directory.
+        char cFilePath[MAX_PATH] = {0};
+        // Search for a .c file in the user's directory.
+        if(!findCFileInUsers(userDirPath, cFilePath)){
+            continue; // IF NO C FILE DO SOMTHING!
+        }
+        printf("--%s\n", cFilePath);
+        compileCFile(cFilePath);
     }
+
+
 }
 
 
@@ -228,5 +283,6 @@ int main(int argc, char *argv[]) {
     int resultsFd = createResultFile();
 
 
-    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
+    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd, errorFd);
+
 }

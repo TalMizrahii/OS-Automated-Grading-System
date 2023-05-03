@@ -1,3 +1,3 @@
-students
-io/input.txt
-io/correct_output.txt
+/home/tal/Desktop/OS-Files-System/files/students
+/home/tal/Desktop/OS-Files-System/files/io/input.txt
+/home/tal/Desktop/OS-Files-System/files/io/correct_output.txt
