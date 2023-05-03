@@ -212,11 +212,18 @@ int compileCFile(char *pathToCFile) {
     }
     if(pid == CHILD_PROCESS){
         char* argumentList[] = {"gcc", pathToCFile, NULL}; // NULL terminated array of char* strings
-        execvp("gcc", argumentList);
-
+        if(execvp("gcc", argumentList) <= ERROR){
+            writeToScreen("Error in: execvp\n");
+            printf("\n1\n");
+            exit(-1);
+        }
+        printf("\n2\n");
+        exit(1);
     }
     else{
         wait(&status);
+        status /= 256;
+        printf("status = %d\n", status);
     }
 }
 
