@@ -278,7 +278,7 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
     dup2(testFd, STDOUT_FILENO);
 }
 
-void runExecFile(char *fullPathToExec, char *userDirPath, int inputFd, int outputFd) {
+int runExecFile(char *userDirPath, int inputFd) {
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
@@ -302,7 +302,38 @@ void runExecFile(char *fullPathToExec, char *userDirPath, int inputFd, int outpu
         exit(1);
     } else {
         wait(&status);
+        return !status;
     }
+}
+
+int compareFiles(char *userDirPath, char *outputPath) {
+    // Create a status int to save the exit status of the child.
+    int status;
+    // Fork the process to execute the gcc command.
+    pid_t pid;
+    pid = fork();
+    // Validate no error occur.
+    if (pid <= ERROR) {
+        writeToScreen("Error in: fork\n");
+        exit(-1);
+    }
+    // If it;s the child process.
+    if (pid == CHILD_PROCESS) {
+        char fullPathToCompTxt[MAX_PATH] = {0};
+        strcpy(fullPathToCompTxt, userDirPath);
+        strcat(fullPathToCompTxt, "/testComp.txt");
+        char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
+        // Execute the compiled file.
+        if (execvp("./comp.out", argumentList) <= ERROR) {
+            writeToScreen("Error in: execvp\n");
+            exit(-1);
+        }
+        exit(1);
+    } else {
+        wait(&status);
+        return !status;
+    }
+
 }
 
 /**
@@ -310,7 +341,7 @@ void runExecFile(char *fullPathToExec, char *userDirPath, int inputFd, int outpu
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int resultsFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, char *outputPath, int resultsFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -338,7 +369,8 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, int outputFd, int 
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
         }
-        runExecFile(fullPathToExec, userDirPath, inputFd, outputFd);
+        runExecFile(userDirPath, inputFd);
+        compareFiles(userDirPath, outputPath);
     }
 }
 
@@ -368,11 +400,12 @@ int main(int argc, char *argv[]) {
     int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
     // Open the output file using the path we extracted from the configuration file.
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
+    close(outputFd);
     // Create result file named results.csv.
     int resultsFd = createResultFile();
     char compFilePath[MAX_PATH] = {0};
     int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
-    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
+    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFilePath, resultsFd);
 
     return 0;
 
