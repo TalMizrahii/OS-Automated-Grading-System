@@ -190,7 +190,7 @@ void openFiles(int *fd1, int *fd2, char *file1, char *file2) {
  */
 int argNumCheck(int argc) {
     if (argc != 3) {
-        write(1, "NOT ENOUGH ARGUMENTS!\n", 23);
+        write(1, "NOT ENOUGH ARGUMENTS!\n", 22);
         exit(-1);
     }
     return 1;
