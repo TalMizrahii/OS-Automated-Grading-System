@@ -234,6 +234,12 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
+    // // Create a path to the execution file by Coping the path to the directory.
+    strcpy(fullPathToExec, userDirPath);
+    // Concatenate the a.out execution name.
+    strcat(fullPathToExec, "/");
+    strcat(fullPathToExec, execName);
+    //
     pid_t pid;
     pid = fork();
     // Validate no error occur.
@@ -243,11 +249,6 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-        // // Create a path to the execution file by Coping the path to the directory.
-        strcpy(fullPathToExec, userDirPath);
-        // Concatenate the a.out execution name.
-        strcat(fullPathToExec, "/");
-        strcat(fullPathToExec, execName);
         // Compile the program.
         char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
         // Execute the compilation line.
@@ -264,20 +265,20 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
 }
 
 
-int redirectComparisonFile(char* userDirPath, int inputFd, int outPutFd){
+int redirectComparisonFile(char *userDirPath, int inputFd) {
     char fullPathToCompTxt[MAX_PATH] = {0};
     strcpy(fullPathToCompTxt, userDirPath);
     strcat(fullPathToCompTxt, "/testComp.txt");
-    int testFd = open(".txt", O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
+    int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
     if (testFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(-1);
     }
     dup2(inputFd, STDIN_FILENO);
-    dup2(outPutFd, STDOUT_FILENO);
+    dup2(testFd, STDOUT_FILENO);
 }
 
-void runExecFile(char* fullPathToExec, char* userDirPath, int inputFd, int outputFd){
+void runExecFile(char *fullPathToExec, char *userDirPath, int inputFd, int outputFd) {
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
@@ -290,9 +291,9 @@ void runExecFile(char* fullPathToExec, char* userDirPath, int inputFd, int outpu
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-        redirectComparisonFile(userDirPath, inputFd, outputFd);
+        redirectComparisonFile(userDirPath, inputFd);
         chdir(userDirPath);
-        char* argumentList[] = {"./a.out", NULL};
+        char *argumentList[] = {"./a.out", NULL};
         // Execute the compiled file.
         if (execvp("./a.out", argumentList) <= ERROR) {
             writeToScreen("Error in: execvp\n");
@@ -369,7 +370,8 @@ int main(int argc, char *argv[]) {
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
     // Create result file named results.csv.
     int resultsFd = createResultFile();
-
+    char compFilePath[MAX_PATH] = {0};
+    int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
     traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFd, resultsFd);
 
     return 0;
