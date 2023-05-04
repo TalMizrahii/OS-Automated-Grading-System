@@ -233,13 +233,12 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
     // Create a status int to save the exit status of the child.
     int status;
-    // Fork the process to execute the gcc command.
     // // Create a path to the execution file by Coping the path to the directory.
     strcpy(fullPathToExec, userDirPath);
     // Concatenate the a.out execution name.
     strcat(fullPathToExec, "/");
     strcat(fullPathToExec, execName);
-    //
+    // Fork the process to execute the gcc command.
     pid_t pid;
     pid = fork();
     // Validate no error occur.
@@ -264,7 +263,13 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
     return !status;
 }
 
-
+/**
+ * Construct a path to a new test file to store the output from a user's program,
+ * and redirect the standard input and output to the input file and the test file accordingly.
+ * @param userDirPath The path to the user's directory to open inside it the output file.
+ * @param inputFd The file descriptor of the input file.
+ * @return The file descriptor of the test file.
+ */
 int redirectComparisonFile(char *userDirPath, int inputFd) {
     char fullPathToCompTxt[MAX_PATH] = {0};
     strcpy(fullPathToCompTxt, userDirPath);
@@ -276,6 +281,7 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
     }
     dup2(inputFd, STDIN_FILENO);
     dup2(testFd, STDOUT_FILENO);
+    return testFd;
 }
 
 int runExecFile(char *userDirPath, int inputFd) {
