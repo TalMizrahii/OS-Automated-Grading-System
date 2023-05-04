@@ -46,7 +46,7 @@ void closeFile(int fd) {
 void constructPath(char *args[], char *path) {
     // A counter for the args position.
     int i = 0;
-    // Check if the argument is nut NULL.
+    // Check if the argument is not NULL.
     if (args[0] == NULL) {
         return;
     }
@@ -238,6 +238,41 @@ int validC(char *fileName) {
     return 0;
 }
 
+/**
+ *
+ * @param pathToCFile
+ * @param userDirPath
+ * @param fullPathToExec
+ * @param execName
+ * @return
+ */
+int executeVP(char *argumentList[]) {
+    // Create a status int to save the exit status of the child.
+    int status;
+    // Fork the process to execute the gcc command.
+    pid_t pid;
+    pid = fork();
+    // Validate no error occur.
+    if (pid <= ERROR) {
+        writeToScreen("Error in: fork\n");
+        exit(-1);
+    }
+    // If it;s the child process.
+    if (pid == CHILD_PROCESS) {
+        // Compile the program.
+        // Execute the compilation line.
+        if (execvp(argumentList[0], argumentList) <= ERROR) {
+            writeToScreen("Error in: execvp\n");
+            exit(-1);
+        }
+        exit(1);
+    } else {
+        wait(&status);
+    }
+    // Check if the compilation phase succeeded. If so, return 1.
+    return !status;
+}
+
 
 /**
  * Given a path to a user directory, the function is traversing all files looking for a .c file.
@@ -268,47 +303,7 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 }
 
 
-/**
- *
- * @param pathToCFile
- * @param userDirPath
- * @param fullPathToExec
- * @param execName
- * @return
- */
-int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
-    // Create a status int to save the exit status of the child.
-    int status;
-    // Fork the process to execute the gcc command.
-    // // Create a path to the execution file by Coping the path to the directory.
-    strcpy(fullPathToExec, userDirPath);
-    // Concatenate the a.out execution name.
-    strcat(fullPathToExec, "/");
-    strcat(fullPathToExec, execName);
-    //
-    pid_t pid;
-    pid = fork();
-    // Validate no error occur.
-    if (pid <= ERROR) {
-        writeToScreen("Error in: fork\n");
-        exit(-1);
-    }
-    // If it;s the child process.
-    if (pid == CHILD_PROCESS) {
-        // Compile the program.
-        char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
-        // Execute the compilation line.
-        if (execvp("gcc", argumentList) <= ERROR) {
-            writeToScreen("Error in: execvp\n");
-            exit(-1);
-        }
-        exit(1);
-    } else {
-        wait(&status);
-    }
-    // Check if the compilation phase succeeded. If so, return 1.
-    return !status;
-}
+
 
 /**
  * Construct a path to a new test file to store the output from a user's program,
@@ -400,7 +395,6 @@ int compareFiles(char *userDirPath, char *outputPath) {
     } else {
         // Return the status of the program ran by the child process.
         wait(&status);
-        printf("path: %s\nval = %d\n", userDirPath, status / 256);
         // The program returns 0 if succeeded, so return the opposite.
         return !status;
     }
@@ -408,6 +402,15 @@ int compareFiles(char *userDirPath, char *outputPath) {
 }
 
 
+
+
+int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName){
+    char*args[] = {userDirPath, "/", execName, NULL};
+    constructPath(args, fullPathToExec);
+    char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
+    // Compile the file.
+    return executeVP(argumentList);
+}
 
 
 /**
@@ -434,14 +437,13 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         if (!findCFileInUsers(userDirPath, cFilePath)) {
             continue; // IF NO C FILE DO SOMTHING!
         }
-        // Create an array to store the path to the execution file.
         char fullPathToExec[MAX_PATH] = {0};
-        // Compile the file.
         if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
             // If the compilation didn't work.
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
         }
+
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
         // Run the users execution file.
