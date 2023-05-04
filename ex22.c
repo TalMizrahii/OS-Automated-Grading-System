@@ -252,7 +252,7 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
     strcat(fullPathToCompTxt, "/testComp.txt");
     // Open the test file.
     int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
-    // Check if the file opend.
+    // Check if the file opened.
     if (testFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(-1);
@@ -285,7 +285,7 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-        if (userDirPath) {
+        if (inputFd) {
             redirectComparisonFile(userDirPath, inputFd);
             chdir(userDirPath);
         }
@@ -401,7 +401,7 @@ int compareFiles(char *userDirPath, char *outputPath) {
 }
 
 int runExecFile(char *fullPathToExec,int inputFd, char* userDirPath) {
-    char *args[] = {fullPathToExec, NULL};
+    char *args[] = {"a.out", NULL};
     return executeVP(args, inputFd, userDirPath);
 }
 
