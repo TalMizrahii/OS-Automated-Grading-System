@@ -239,6 +239,32 @@ int validC(char *fileName) {
 }
 
 /**
+ * Construct a path to a new test file to store the output from a user's program,
+ * and redirect the standard input and output to the input file and the test file accordingly.
+ * @param userDirPath The path to the user's directory to open inside it the output file.
+ * @param inputFd The file descriptor of the input file.
+ * @return The file descriptor of the test file.
+ */
+int redirectComparisonFile(char *userDirPath, int inputFd) {
+    // Create a path to the test file.
+    char fullPathToCompTxt[MAX_PATH] = {0};
+    strcpy(fullPathToCompTxt, userDirPath);
+    strcat(fullPathToCompTxt, "/testComp.txt");
+    // Open the test file.
+    int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
+    // Check if the file opend.
+    if (testFd <= ERROR) {
+        writeToScreen("Error in: open\n");
+        exit(-1);
+    }
+    // Redirect the standard input and output.
+    dup2(inputFd, STDIN_FILENO);
+    dup2(testFd, STDOUT_FILENO);
+    // Return the file descriptor of the test file.
+    return testFd;
+}
+
+/**
  *
  * @param pathToCFile
  * @param userDirPath
@@ -246,7 +272,7 @@ int validC(char *fileName) {
  * @param execName
  * @return
  */
-int executeVP(char *argumentList[]) {
+int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
@@ -259,7 +285,10 @@ int executeVP(char *argumentList[]) {
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-        // Compile the program.
+        if (userDirPath) {
+            redirectComparisonFile(userDirPath, inputFd);
+            chdir(userDirPath);
+        }
         // Execute the compilation line.
         if (execvp(argumentList[0], argumentList) <= ERROR) {
             writeToScreen("Error in: execvp\n");
@@ -270,7 +299,7 @@ int executeVP(char *argumentList[]) {
         wait(&status);
     }
     // Check if the compilation phase succeeded. If so, return 1.
-    return !status;
+    return status;
 }
 
 
@@ -305,113 +334,76 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 
 
 
-/**
- * Construct a path to a new test file to store the output from a user's program,
- * and redirect the standard input and output to the input file and the test file accordingly.
- * @param userDirPath The path to the user's directory to open inside it the output file.
- * @param inputFd The file descriptor of the input file.
- * @return The file descriptor of the test file.
- */
-int redirectComparisonFile(char *userDirPath, int inputFd) {
-    // Create a path to the test file.
-    char fullPathToCompTxt[MAX_PATH] = {0};
-    strcpy(fullPathToCompTxt, userDirPath);
-    strcat(fullPathToCompTxt, "/testComp.txt");
-    // Open the test file.
-    int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
-    // Check if the file opend.
-    if (testFd <= ERROR) {
-        writeToScreen("Error in: open\n");
-        exit(-1);
-    }
-    // Redirect the standard input and output.
-    dup2(inputFd, STDIN_FILENO);
-    dup2(testFd, STDOUT_FILENO);
-    // Return the file descriptor of the test file.
-    return testFd;
-}
+//int runExecFile(char *userDirPath, int inputFd) {
+//    // Create a status int to save the exit status of the child.
+//    int status;
+//    // Fork the process to execute the gcc command.
+//    pid_t pid;
+//    pid = fork();
+//    // Validate no error occur.
+//    if (pid <= ERROR) {
+//        writeToScreen("Error in: fork\n");
+//        exit(-1);
+//    }
+//    // If it's the child process.
+//    if (pid == CHILD_PROCESS) {
+//        redirectComparisonFile(userDirPath, inputFd);
+//        chdir(userDirPath);
+//        char *argumentList[] = {"./a.out", NULL};
+//        // Execute the compiled file.
+//        if (execvp("./a.out", argumentList) <= ERROR) {
+//            writeToScreen("Error in: execvp\n");
+//            exit(-1);
+//        }
+//        exit(1);
+//        // If it's the father process.
+//    } else {
+//        // Return the status of the program ran by the child process.
+//        wait(&status);
+//        // The program returns 0 if succeeded, so return the opposite.
+//        return !status;
+//    }
+//}
 
-int runExecFile(char *userDirPath, int inputFd) {
-    // Create a status int to save the exit status of the child.
-    int status;
-    // Fork the process to execute the gcc command.
-    pid_t pid;
-    pid = fork();
-    // Validate no error occur.
-    if (pid <= ERROR) {
-        writeToScreen("Error in: fork\n");
-        exit(-1);
-    }
-    // If it;s the child process.
-    if (pid == CHILD_PROCESS) {
-        int testFd = redirectComparisonFile(userDirPath, inputFd);
-        chdir(userDirPath);
-        char *argumentList[] = {"./a.out", NULL};
-        // Execute the compiled file.
-        if (execvp("./a.out", argumentList) <= ERROR) {
-            writeToScreen("Error in: execvp\n");
-            exit(-1);
-        }
-        exit(1);
-        // If it's the father process.
-    } else {
-        // Return the status of the program ran by the child process.
-        wait(&status);
-        // The program returns 0 if succeeded, so return the opposite.
-        return !status;
-    }
-}
 
 /**
- * Compare the output file and the test file of the user.
+ * Compile .c file using the executeVP function.
+ * @param pathToCFile The path to the .c file.
  * @param userDirPath The path to the user's directory.
- * @param outputPath The path to the output file.
- * @return The result of the compression; 1 for identical, 3 for similar and 2 for different.
+ * @param fullPathToExec The path to the execution file.
+ * @param execName The name of the execution file.
+ * @return The status of the compilation command.
  */
-int compareFiles(char *userDirPath, char *outputPath) {
-    // Create a status int to save the exit status of the child.
-    int status;
-    // Fork the process to execute the gcc command.
-    pid_t pid;
-    pid = fork();
-    // Validate no error occur.
-    if (pid <= ERROR) {
-        writeToScreen("Error in: fork\n");
-        exit(-1);
-    }
-    // If it;s the child process.
-    if (pid == CHILD_PROCESS) {
-        char fullPathToCompTxt[MAX_PATH] = {0};
-        strcpy(fullPathToCompTxt, userDirPath);
-        strcat(fullPathToCompTxt, "/testComp.txt");
-        char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
-        // Execute the compiled file.
-        if (execvp("./comp.out", argumentList) <= ERROR) {
-            writeToScreen("Error in: execvp\n");
-            exit(-1);
-        }
-        exit(1);
-        // If it's the father process.
-    } else {
-        // Return the status of the program ran by the child process.
-        wait(&status);
-        // The program returns 0 if succeeded, so return the opposite.
-        return !status;
-    }
-
-}
-
-
-
-
-int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName){
-    char*args[] = {userDirPath, "/", execName, NULL};
+int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
+    char *args[] = {userDirPath, "/", execName, NULL};
     constructPath(args, fullPathToExec);
     char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
     // Compile the file.
-    return executeVP(argumentList);
+    return executeVP(argumentList, 0, NULL);
 }
 
+/**
+ * compare the output file of the user with the correct output and return the result.
+ * Do it using the executeVP function.
+ * @param userDirPath The user's directory.
+ * @param outputPath The path to the correct output file.
+ * @return The return status of the execution.
+ */
+int compareFiles(char *userDirPath, char *outputPath) {
+    // construct a path to the test file.
+    char fullPathToCompTxt[MAX_PATH] = {0};
+    char *args[] = {userDirPath, "/testComp.txt", NULL};
+    constructPath(args, fullPathToCompTxt);
+    // Construct an argument list for the execVP function to run.
+    char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
+    // Return the result.
+    return executeVP(argumentList, 0, NULL);
+}
+
+int runExecFile(char *fullPathToExec,int inputFd, char* userDirPath) {
+    char *args[] = {fullPathToExec, NULL};
+    return executeVP(args, inputFd, userDirPath);
+}
 
 /**
  *
@@ -438,7 +430,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
             continue; // IF NO C FILE DO SOMTHING!
         }
         char fullPathToExec[MAX_PATH] = {0};
-        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
+        if (compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
             // If the compilation didn't work.
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
@@ -447,11 +439,13 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
         // Run the users execution file.
-        runExecFile(userDirPath, inputFd);
+        runExecFile(fullPathToExec, inputFd, userDirPath);
         // Close the input file to restore the file descriptor.
         closeFile(inputFd);
-        // Compare the output file and the test file.
+        // Create args list to execute the compare program.
         int status = compareFiles(userDirPath, outputPath);
+
+        printf("%s has status = %d\n", userDirPath, status / 256);
 
     }
 }
