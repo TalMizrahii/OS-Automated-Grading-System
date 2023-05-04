@@ -277,7 +277,13 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
     return !status;
 }
 
-
+/**
+ * Construct a path to a new test file to store the output from a user's program,
+ * and redirect the standard input and output to the input file and the test file accordingly.
+ * @param userDirPath The path to the user's directory to open inside it the output file.
+ * @param inputFd The file descriptor of the input file.
+ * @return The file descriptor of the test file.
+ */
 int redirectComparisonFile(char *userDirPath, int inputFd) {
     char fullPathToCompTxt[MAX_PATH] = {0};
     strcpy(fullPathToCompTxt, userDirPath);
