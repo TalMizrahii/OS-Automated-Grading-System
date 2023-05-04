@@ -71,7 +71,7 @@ int openFile(char *filePath) {
  * @return 1 if it is, 0 otherwise.
  */
 int isSpace(char ch) {
-    if (ch == ' ' || ch == '\n' || ch == '\r' || ch== '0') {
+    if (ch == ' ' || ch == '\n' || ch == '\r') {
         return 1;
     }
     return 0;
@@ -126,8 +126,8 @@ int similar(int fd1, int fd2) {
             break;
         }
         // If the character that was read is a space, continue reading.
-        while (isSpace(ch1) && readByteFile(fd1, &ch1));
-        while (isSpace(ch2) && readByteFile(fd2, &ch2));
+        while (isSpace(ch1) && (x1 = readByteFile(fd1, &ch1)));
+        while (isSpace(ch2) && (x2 = readByteFile(fd2, &ch2)));
         // If the characters are not just similar, break the loop.
         if (upper(ch1) != upper(ch2)) {
             break;

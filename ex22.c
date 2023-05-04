@@ -14,12 +14,25 @@
 #define ALL_ACCESS 0777
 #define CHILD_PROCESS 0
 
+
 /**
  * A function to write to the default output (screen).
  * @param msg The message to print.
  */
 void writeToScreen(char *msg) {
     if (write(STDOUT_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR) {
+        exit(-1);
+    }
+}
+
+/**
+ * Closing a file. If an error accord, close the program.
+ * @param fd The file descriptor of the file to close.
+ */
+void closeFile(int fd) {
+    // Close the file.
+    if (close(fd) <= ERROR) {
+        writeToScreen("Error in: close\n");
         exit(-1);
     }
 }
@@ -276,6 +289,7 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
     }
     dup2(inputFd, STDIN_FILENO);
     dup2(testFd, STDOUT_FILENO);
+    return testFd;
 }
 
 int runExecFile(char *userDirPath, int inputFd) {
@@ -291,7 +305,7 @@ int runExecFile(char *userDirPath, int inputFd) {
     }
     // If it;s the child process.
     if (pid == CHILD_PROCESS) {
-        redirectComparisonFile(userDirPath, inputFd);
+        int testFd = redirectComparisonFile(userDirPath, inputFd);
         chdir(userDirPath);
         char *argumentList[] = {"./a.out", NULL};
         // Execute the compiled file.
@@ -301,6 +315,7 @@ int runExecFile(char *userDirPath, int inputFd) {
         }
         exit(1);
     } else {
+
         wait(&status);
         return !status;
     }
@@ -342,7 +357,7 @@ int compareFiles(char *userDirPath, char *outputPath) {
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, char *outputPath, int resultsFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, char* inputFilePath, char *outputPath, int resultsFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -365,12 +380,15 @@ void traverseUsersDir(DIR *dir, char *pathToDir, int inputFd, char *outputPath, 
         // Create an array to store the path to the execution file.
         char fullPathToExec[MAX_PATH] = {0};
         // Compile the file.
-//        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
-//            // If the compilation didn't work.
-//            writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
-//            continue;
-//        }
-//        runExecFile(userDirPath, inputFd);
+        if (!compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
+            // If the compilation didn't work.
+            writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
+            continue;
+        }
+        // Open the output file using the path we extracted from the configuration file.
+        int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
+        runExecFile(userDirPath, inputFd);
+        closeFile(inputFd);
         compareFiles(userDirPath, outputPath);
     }
 }
@@ -398,16 +416,13 @@ int main(int argc, char *argv[]) {
     // Open the directory from the first line of the configuration file.
     DIR *usersDir = openDirectory(usersFolderPath);
     // Open the output file using the path we extracted from the configuration file.
-    int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
-    // Open the output file using the path we extracted from the configuration file.
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
     close(outputFd);
     // Create result file named results.csv.
     int resultsFd = createResultFile();
     char compFilePath[MAX_PATH] = {0};
-    int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
-    traverseUsersDir(usersDir, usersFolderPath, inputFd, outputFilePath, resultsFd);
+    //int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
+    traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd);
 
     return 0;
-
 }
