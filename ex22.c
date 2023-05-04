@@ -25,6 +25,7 @@ void writeToScreen(char *msg) {
     }
 }
 
+
 /**
  * Closing a file. If an error accord, close the program.
  * @param fd The file descriptor of the file to close.
@@ -34,6 +35,30 @@ void closeFile(int fd) {
     if (close(fd) <= ERROR) {
         writeToScreen("Error in: close\n");
         exit(-1);
+    }
+}
+
+/**
+ * Constructing a path by concatenating all args until hitting NULL.
+ * @param args The strings to concatenating.
+ * @param path The string to save the result.
+ */
+void constructPath(char *args[], char *path) {
+    // A counter for the args position.
+    int i = 0;
+    // Check if the argument is nut NULL.
+    if (args[0] == NULL) {
+        return;
+    }
+    // Copy the first argument to the result path.
+    strcpy(path, args[0]);
+    // Raise the counter to the second argument.
+    i++;
+    // Go over all arguments until the null.
+    while (args[i] != NULL) {
+        // Concatenate the path.
+        strcat(path, args[i]);
+        i++;
     }
 }
 
@@ -243,6 +268,14 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 }
 
 
+/**
+ *
+ * @param pathToCFile
+ * @param userDirPath
+ * @param fullPathToExec
+ * @param execName
+ * @return
+ */
 int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
     // Create a status int to save the exit status of the child.
     int status;
@@ -374,6 +407,9 @@ int compareFiles(char *userDirPath, char *outputPath) {
 
 }
 
+
+
+
 /**
  *
  * @param dir
@@ -390,9 +426,8 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         }
         // Construct the full path of the user's directory.
         char userDirPath[MAX_PATH] = {0};
-        strcpy(userDirPath, pathToDir);
-        strcat(userDirPath, "/");
-        strcat(userDirPath, entry->d_name);
+        char *path[] = {pathToDir, "/", entry->d_name, NULL};
+        constructPath(path, userDirPath);
         // Create a string for the .c file inside the directory.
         char cFilePath[MAX_PATH] = {0};
         // Search for a .c file in the user's directory.
