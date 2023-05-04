@@ -285,16 +285,21 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
  * @return The file descriptor of the test file.
  */
 int redirectComparisonFile(char *userDirPath, int inputFd) {
+    // Create a path to the test file.
     char fullPathToCompTxt[MAX_PATH] = {0};
     strcpy(fullPathToCompTxt, userDirPath);
     strcat(fullPathToCompTxt, "/testComp.txt");
+    // Open the test file.
     int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
+    // Check if the file opend.
     if (testFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(-1);
     }
+    // Redirect the standard input and output.
     dup2(inputFd, STDIN_FILENO);
     dup2(testFd, STDOUT_FILENO);
+    // Return the file descriptor of the test file.
     return testFd;
 }
 
@@ -320,13 +325,21 @@ int runExecFile(char *userDirPath, int inputFd) {
             exit(-1);
         }
         exit(1);
+        // If it's the father process.
     } else {
-
+        // Return the status of the program ran by the child process.
         wait(&status);
+        // The program returns 0 if succeeded, so return the opposite.
         return !status;
     }
 }
 
+/**
+ * Compare the output file and the test file of the user.
+ * @param userDirPath The path to the user's directory.
+ * @param outputPath The path to the output file.
+ * @return The result of the compression; 1 for identical, 3 for similar and 2 for different.
+ */
 int compareFiles(char *userDirPath, char *outputPath) {
     // Create a status int to save the exit status of the child.
     int status;
@@ -350,9 +363,12 @@ int compareFiles(char *userDirPath, char *outputPath) {
             exit(-1);
         }
         exit(1);
+        // If it's the father process.
     } else {
+        // Return the status of the program ran by the child process.
         wait(&status);
         printf("path: %s\nval = %d\n", userDirPath, status / 256);
+        // The program returns 0 if succeeded, so return the opposite.
         return !status;
     }
 
@@ -363,7 +379,7 @@ int compareFiles(char *userDirPath, char *outputPath) {
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, char* inputFilePath, char *outputPath, int resultsFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outputPath, int resultsFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -393,9 +409,13 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char* inputFilePath, char *outp
         }
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
+        // Run the users execution file.
         runExecFile(userDirPath, inputFd);
+        // Close the input file to restore the file descriptor.
         closeFile(inputFd);
-        compareFiles(userDirPath, outputPath);
+        // Compare the output file and the test file.
+        int status = compareFiles(userDirPath, outputPath);
+
     }
 }
 
