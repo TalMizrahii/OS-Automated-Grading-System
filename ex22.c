@@ -246,12 +246,13 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
     // Create a status int to save the exit status of the child.
     int status;
+    // Fork the process to execute the gcc command.
     // // Create a path to the execution file by Coping the path to the directory.
     strcpy(fullPathToExec, userDirPath);
     // Concatenate the a.out execution name.
     strcat(fullPathToExec, "/");
     strcat(fullPathToExec, execName);
-    // Fork the process to execute the gcc command.
+    //
     pid_t pid;
     pid = fork();
     // Validate no error occur.
