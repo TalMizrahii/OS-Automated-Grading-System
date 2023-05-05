@@ -159,10 +159,12 @@ int identical(int fd1, int fd2) {
         // Read from the files one byte.
         x1 = readByteFile(fd1, &ch1);
         x2 = readByteFile(fd2, &ch2);
+        // If both files ended and all chars so far are identical, close the files and return IDENTICAL.
         if (x1 == 0 && x2 == 0) {
             closeFiles(fd1, fd2);
             return IDENTICAL;
         }
+        // If one pairs of chars are different or one of the files ended, close the files and return 0.
         if ((x1 == 0) || (x2 == 0) || (ch1 != ch2)) {
             closeFiles(fd1, fd2);
             return 0;

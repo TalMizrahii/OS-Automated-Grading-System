@@ -294,7 +294,7 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
         }
         // Execute the compilation line.
         if (execvp(argumentList[0], argumentList) <= ERROR) {
-            writeToScreen("Error in: execvp1\n");
+            writeToScreen("Error in: execvp\n");
             exit(-1);
         }
         exit(1);
@@ -358,9 +358,8 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
  * @param outputPath The path to the correct output file.
  * @return The return status of the execution.
  */
-int compareFiles(char *userDirPath, char *outputPath) {
+int compareFiles(char *userDirPath, char *outputPath, char* fullPathToCompTxt) {
     // construct a path to the test file.
-    char fullPathToCompTxt[MAX_PATH] = {0};
     char *args[] = {userDirPath, "/testComp.txt", NULL};
     constructPath(args, fullPathToCompTxt);
     // Construct an argument list for the execVP function to run.
@@ -409,6 +408,8 @@ void writeToResultsAfterRun(int status, int resultsFd, char *userName) {
     }
 }
 
+
+
 /**
  *
  * @param dir
@@ -445,12 +446,17 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
         // Run the users execution file.
         runExecFile(inputFd, userDirPath);
+        // Delete the execution file.
+        remove(fullPathToExec);
         // Close the input file to restore the file descriptor.
         closeFile(inputFd);
+        char fullPathToCompTxt[MAX_PATH] = {0};
         // Create args list to execute the compare program.
-        int status = compareFiles(userDirPath, outputPath);
+        int status = compareFiles(userDirPath, outputPath, fullPathToCompTxt);
+        // Remove the test file.
+        remove(fullPathToCompTxt);
         // Write the result to the results.txt file.
-        writeToResultsAfterRun(status, resultsFd, entry->d_name);
+        writeToResultsAfterRun(status / 256, resultsFd, entry->d_name);
     }
 }
 
@@ -482,7 +488,7 @@ int main(int argc, char *argv[]) {
     // Create result file named results.csv.
     int resultsFd = createResultFile();
     char compFilePath[MAX_PATH] = {0};
-    //int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
+    int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
     traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd);
 
     return 0;
