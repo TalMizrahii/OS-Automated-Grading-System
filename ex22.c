@@ -7,6 +7,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #define ERROR (-1)
 #define MAX_PATH 200
@@ -212,7 +213,7 @@ int createResultFile() {
  * @return If succeeded, the file descriptor of the file. If not, the program prints an error and exits.
  */
 int createErrorFile() {
-    int errorFd = open("errors.txt", O_CREAT | O_APPEND | O_RDWR, ALL_ACCESS);
+    int errorFd = open("errors.txt", O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
     if (errorFd <= ERROR) {
         writeToScreen("Error in: open\n");
         exit(-1);
@@ -239,6 +240,34 @@ int validC(char *fileName) {
     }
     // It's not a .c file.
     return 0;
+}
+
+
+/**
+ * Writing the result after testing the result files.
+ * @param status The status of the check after comparing.
+ * @param resultsFd The result's file descriptor number.
+ * @param userName The user's name.
+ */
+void writeToResultsAfterRun(int status, int resultsFd, char *userName) {
+    // Get the status to the switch case.
+    switch (status) {
+        case IDENTICAL:
+            // For identical, put 100.
+            writeToResults(resultsFd, userName, "100", "EXCELLENT");
+            break;
+        case NON_EQUAL:
+            // For wrong output, put 0.
+            writeToResults(resultsFd, userName, "50", "WRONG");
+            break;
+        case SIMILAR:
+            // For similar output, put 75.
+            writeToResults(resultsFd, userName, "75", "SIMILAR");
+            break;
+        default:
+            // The default is wrong output.
+            writeToResults(resultsFd, userName, "50", "WRONG");
+    }
 }
 
 /**
@@ -344,8 +373,10 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
  * @return The status of the compilation command.
  */
 int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
+    // Creat a path to the execution file.
     char *args[] = {userDirPath, "/", execName, NULL};
     constructPath(args, fullPathToExec);
+    // Create an arguments list to the executeVP function.
     char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
     // Compile the file.
     return executeVP(argumentList, 0, NULL);
@@ -358,10 +389,7 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
  * @param outputPath The path to the correct output file.
  * @return The return status of the execution.
  */
-int compareFiles(char *userDirPath, char *outputPath, char* fullPathToCompTxt) {
-    // construct a path to the test file.
-    char *args[] = {userDirPath, "/testComp.txt", NULL};
-    constructPath(args, fullPathToCompTxt);
+int compareFiles(char *userDirPath, char *outputPath, char *fullPathToCompTxt) {
     // Construct an argument list for the execVP function to run.
     char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
     // Return the result.
@@ -377,38 +405,21 @@ int compareFiles(char *userDirPath, char *outputPath, char* fullPathToCompTxt) {
 int runExecFile(int inputFd, char *userDirPath) {
     // Create an argument list for the executeVP command.
     char *args[] = {"./a.out", NULL};
+    // Check the time it takes to run the program. Set the start time to start.
+    clock_t start;
+    time(&start);
     // Run the program using the executeVP command and return it's return value.
-    return executeVP(args, inputFd, userDirPath);
-}
-
-/**
- * Writing the result after testing the result files.
- * @param status The status of the check after comparing.
- * @param resultsFd The result's file descriptor number.
- * @param userName The user's name.
- */
-void writeToResultsAfterRun(int status, int resultsFd, char *userName) {
-    // Get the status to the switch case.
-    switch (status) {
-        case IDENTICAL:
-            // For identical, put 100.
-            writeToResults(resultsFd, userName, "100", "EXCELLENT");
-            break;
-        case NON_EQUAL:
-            // For wrong output, put 0.
-            writeToResults(resultsFd, userName, "50", "WRONG");
-            break;
-        case SIMILAR:
-            // For similar output, put 75.
-            writeToResults(resultsFd, userName, "75", "SIMILAR");
-            break;
-        default:
-            // The default is wrong output.
-            writeToResults(resultsFd, userName, "50", "WRONG");
+    executeVP(args, inputFd, userDirPath);
+    // Set the end time of the running to end.
+    clock_t end;
+    time(&end);
+    // If the time it took the function to run is less than the timeout, return 1.
+    if (difftime(end, start) <= 5.0) {
+        return 1;
     }
+    // If it's more than the timeout, return 0.
+    return 0;
 }
-
-
 
 /**
  *
@@ -438,19 +449,30 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         }
         char fullPathToExec[MAX_PATH] = {0};
         if (compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
-            // If the compilation didn't work, write the result to the results file and go to the next user.
+            // If the compilation didn't work, write the result to the results.txt file and go to the next user.
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
         }
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
+        // Create a path to the test file.
+        char fullPathToCompTxt[MAX_PATH] = {0};
+        char *args[] = {userDirPath, "/testComp.txt", NULL};
+        constructPath(args, fullPathToCompTxt);
         // Run the users execution file.
-        runExecFile(inputFd, userDirPath);
+        int runResult = runExecFile(inputFd, userDirPath);
         // Delete the execution file.
         remove(fullPathToExec);
         // Close the input file to restore the file descriptor.
         closeFile(inputFd);
-        char fullPathToCompTxt[MAX_PATH] = {0};
+        // Check if the execution reached timeout.
+        if (!runResult) {
+            // Remove the test file.
+            remove(fullPathToCompTxt);
+            // If so, write the result to the results.txt file and go to the next user.
+            writeToResults(resultsFd, entry->d_name, "20", "TIMEOUT");
+            continue;
+        }
         // Create args list to execute the compare program.
         int status = compareFiles(userDirPath, outputPath, fullPathToCompTxt);
         // Remove the test file.
@@ -487,8 +509,10 @@ int main(int argc, char *argv[]) {
     close(outputFd);
     // Create result file named results.csv.
     int resultsFd = createResultFile();
+    // Compile the ex21.c file to comp.out.
     char compFilePath[MAX_PATH] = {0};
     int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
+
     traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd);
 
     return 0;
