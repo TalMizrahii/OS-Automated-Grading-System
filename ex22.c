@@ -251,7 +251,7 @@ int validC(char *fileName) {
 int redirectComparisonFile(char *userDirPath, int inputFd) {
     // Create a path to the test file.
     char fullPathToCompTxt[MAX_PATH] = {0};
-    char* args[] = {userDirPath, "/testComp.txt", NULL};
+    char *args[] = {userDirPath, "/testComp.txt", NULL};
     constructPath(args, fullPathToCompTxt);
     // Open the test file.
     int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
@@ -375,16 +375,37 @@ int compareFiles(char *userDirPath, char *outputPath) {
  * @param userDirPath The path to the user's directory.
  * @return The return value of the a.out program
  */
-int runExecFile(int inputFd, char* userDirPath) {
+int runExecFile(int inputFd, char *userDirPath) {
     // Create an argument list for the executeVP command.
     char *args[] = {"./a.out", NULL};
     // Run the program using the executeVP command and return it's return value.
     return executeVP(args, inputFd, userDirPath);
 }
 
-void writeToResultsAfterRun(int status, int resultsFd){
-    switch (expression) {
-        
+/**
+ * Writing the result after testing the result files.
+ * @param status The status of the check after comparing.
+ * @param resultsFd The result's file descriptor number.
+ * @param userName The user's name.
+ */
+void writeToResultsAfterRun(int status, int resultsFd, char *userName) {
+    // Get the status to the switch case.
+    switch (status) {
+        case IDENTICAL:
+            // For identical, put 100.
+            writeToResults(resultsFd, userName, "100", "EXCELLENT");
+            break;
+        case NON_EQUAL:
+            // For wrong output, put 0.
+            writeToResults(resultsFd, userName, "50", "WRONG");
+            break;
+        case SIMILAR:
+            // For similar output, put 75.
+            writeToResults(resultsFd, userName, "75", "SIMILAR");
+            break;
+        default:
+            // The default is wrong output.
+            writeToResults(resultsFd, userName, "50", "WRONG");
     }
 }
 
@@ -410,16 +431,16 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         char cFilePath[MAX_PATH] = {0};
         // Search for a .c file in the user's directory.
         if (!findCFileInUsers(userDirPath, cFilePath)) {
-            writeToResults(resultsFd, entry->d_name, "0", "FILE_C_NO");
-            continue; // IF NO C FILE DO SOMTHING!
+            // If no file exist in the user's directory, write 0 to the results file and continue.
+            writeToResults(resultsFd, entry->d_name, "0", "NO_C_FILE");
+            continue;
         }
         char fullPathToExec[MAX_PATH] = {0};
         if (compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
-            // If the compilation didn't work.
+            // If the compilation didn't work, write the result to the results file and go to the next user.
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
         }
-
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
         // Run the users execution file.
@@ -428,8 +449,8 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         closeFile(inputFd);
         // Create args list to execute the compare program.
         int status = compareFiles(userDirPath, outputPath);
-        writeToResultsAfterRun(status, resultsFd);
-        
+        // Write the result to the results.txt file.
+        writeToResultsAfterRun(status, resultsFd, entry->d_name);
     }
 }
 
