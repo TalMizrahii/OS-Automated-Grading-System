@@ -13,6 +13,9 @@
 #define ONE_BYTE 1
 #define ALL_ACCESS 0777
 #define CHILD_PROCESS 0
+#define IDENTICAL 1
+#define SIMILAR 3
+#define NON_EQUAL 2
 
 
 /**
@@ -248,8 +251,8 @@ int validC(char *fileName) {
 int redirectComparisonFile(char *userDirPath, int inputFd) {
     // Create a path to the test file.
     char fullPathToCompTxt[MAX_PATH] = {0};
-    strcpy(fullPathToCompTxt, userDirPath);
-    strcat(fullPathToCompTxt, "/testComp.txt");
+    char* args[] = {userDirPath, "/testComp.txt", NULL};
+    constructPath(args, fullPathToCompTxt);
     // Open the test file.
     int testFd = open(fullPathToCompTxt, O_CREAT | O_TRUNC | O_RDWR, ALL_ACCESS);
     // Check if the file opened.
@@ -291,7 +294,7 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
         }
         // Execute the compilation line.
         if (execvp(argumentList[0], argumentList) <= ERROR) {
-            writeToScreen("Error in: execvp\n");
+            writeToScreen("Error in: execvp1\n");
             exit(-1);
         }
         exit(1);
@@ -332,40 +335,6 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
 }
 
 
-
-
-//int runExecFile(char *userDirPath, int inputFd) {
-//    // Create a status int to save the exit status of the child.
-//    int status;
-//    // Fork the process to execute the gcc command.
-//    pid_t pid;
-//    pid = fork();
-//    // Validate no error occur.
-//    if (pid <= ERROR) {
-//        writeToScreen("Error in: fork\n");
-//        exit(-1);
-//    }
-//    // If it's the child process.
-//    if (pid == CHILD_PROCESS) {
-//        redirectComparisonFile(userDirPath, inputFd);
-//        chdir(userDirPath);
-//        char *argumentList[] = {"./a.out", NULL};
-//        // Execute the compiled file.
-//        if (execvp("./a.out", argumentList) <= ERROR) {
-//            writeToScreen("Error in: execvp\n");
-//            exit(-1);
-//        }
-//        exit(1);
-//        // If it's the father process.
-//    } else {
-//        // Return the status of the program ran by the child process.
-//        wait(&status);
-//        // The program returns 0 if succeeded, so return the opposite.
-//        return !status;
-//    }
-//}
-
-
 /**
  * Compile .c file using the executeVP function.
  * @param pathToCFile The path to the .c file.
@@ -400,9 +369,23 @@ int compareFiles(char *userDirPath, char *outputPath) {
     return executeVP(argumentList, 0, NULL);
 }
 
-int runExecFile(char *fullPathToExec,int inputFd, char* userDirPath) {
-    char *args[] = {"a.out", NULL};
+/**
+ * Running executable file named a.out from a given directory of a user.
+ * @param inputFd The output of the executable will be directed to this file descriptor.
+ * @param userDirPath The path to the user's directory.
+ * @return The return value of the a.out program
+ */
+int runExecFile(int inputFd, char* userDirPath) {
+    // Create an argument list for the executeVP command.
+    char *args[] = {"./a.out", NULL};
+    // Run the program using the executeVP command and return it's return value.
     return executeVP(args, inputFd, userDirPath);
+}
+
+void writeToResultsAfterRun(int status, int resultsFd){
+    switch (expression) {
+        
+    }
 }
 
 /**
@@ -427,6 +410,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         char cFilePath[MAX_PATH] = {0};
         // Search for a .c file in the user's directory.
         if (!findCFileInUsers(userDirPath, cFilePath)) {
+            writeToResults(resultsFd, entry->d_name, "0", "FILE_C_NO");
             continue; // IF NO C FILE DO SOMTHING!
         }
         char fullPathToExec[MAX_PATH] = {0};
@@ -439,14 +423,13 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         // Open the output file using the path we extracted from the configuration file.
         int inputFd = openOutputInput(inputFilePath, "Input file not exist\n");
         // Run the users execution file.
-        runExecFile(fullPathToExec, inputFd, userDirPath);
+        runExecFile(inputFd, userDirPath);
         // Close the input file to restore the file descriptor.
         closeFile(inputFd);
         // Create args list to execute the compare program.
         int status = compareFiles(userDirPath, outputPath);
-
-        printf("%s has status = %d\n", userDirPath, status / 256);
-
+        writeToResultsAfterRun(status, resultsFd);
+        
     }
 }
 
