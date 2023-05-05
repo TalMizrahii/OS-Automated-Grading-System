@@ -29,7 +29,6 @@ void writeToScreen(char *msg) {
     }
 }
 
-
 /**
  * Closing a file. If an error accord, close the program.
  * @param fd The file descriptor of the file to close.
@@ -93,7 +92,6 @@ void writeToResults(int resultsFd, char *name, char *score, char *cause) {
         exit(-1);
     }
 }
-
 
 /**
  * Checking if the amount of arguments are valid to 3.
@@ -363,7 +361,6 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
     return 0;
 }
 
-
 /**
  * Compile .c file using the executeVP function.
  * @param pathToCFile The path to the .c file.
@@ -389,7 +386,7 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
  * @param outputPath The path to the correct output file.
  * @return The return status of the execution.
  */
-int compareFiles(char *userDirPath, char *outputPath, char *fullPathToCompTxt) {
+int compareFiles(char *outputPath, char *fullPathToCompTxt) {
     // Construct an argument list for the execVP function to run.
     char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
     // Return the result.
@@ -474,7 +471,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
             continue;
         }
         // Create args list to execute the compare program.
-        int status = compareFiles(userDirPath, outputPath, fullPathToCompTxt);
+        int status = compareFiles(outputPath, fullPathToCompTxt);
         // Remove the test file.
         remove(fullPathToCompTxt);
         // Write the result to the results.txt file.
@@ -482,12 +479,25 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
     }
 }
 
+/**
+ * Closing all allocated data from the main function
+ * @param usersDir The users directory.
+ * @param errorFd The error.txt file descriptor.
+ * @param resultsFd The results.csv file descriptor.
+ */
+void finishTheProgram(DIR *usersDir, int errorFd, int resultsFd) {
+    closedir(usersDir);
+    closeFile(errorFd);
+    closeFile(resultsFd);
+}
 
 /**
- *
- * @param argc
- * @param argv
- * @return
+ * The main function. Responsible to process the configuration file received via argument,
+ * and transfer data between the different control flow functions of the program.
+ * @param argc The number of arguments received, needs to be exactly 2
+ * (the name of the program and the path to the conf.txt file).
+ * @param argv the array of arguments.
+ * @return 0 if succeeded.
  */
 int main(int argc, char *argv[]) {
     // Check if the amount of arguments is valid.
@@ -511,9 +521,11 @@ int main(int argc, char *argv[]) {
     int resultsFd = createResultFile();
     // Compile the ex21.c file to comp.out.
     char compFilePath[MAX_PATH] = {0};
-    int compFile = compileCFile("ex21.c", ".", compFilePath, "comp.out");
-
+    // Compile the program ex21.c to comp.out.
+    compileCFile("ex21.c", ".", compFilePath, "comp.out");
+    // Travers the users directories and grade them.
     traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd);
-
+    // Finish the program smoothly by releasing all allocated data.
+    finishTheProgram(usersDir, errorFd, resultsFd);
     return 0;
 }
