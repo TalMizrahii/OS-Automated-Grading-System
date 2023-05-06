@@ -40,6 +40,17 @@ void closeFile(int fd) {
 }
 
 /**
+ * Closing a directory and checking if it failed.
+ * @param dir The pointer to the directory to close.
+ */
+void closeDirectory(DIR *dir) {
+    if (closedir(dir) <= ERROR) {
+        writeToScreen("Error in closedir\n");
+        exit(-1);
+    }
+}
+
+/**
  * Constructing a path by concatenating all args until hitting NULL.
  * @param args The strings to concatenating.
  * @param path The string to save the result.
@@ -167,7 +178,7 @@ void readConfiguration(char *line1, char *line2, char *line3, int fd) {
  * @param path The path to the directory.
  * @return The pointer to the directory data type.
  */
-DIR *openDirectory(char *path) {
+DIR *openDirectory(char *path, char *errorMsg) {
     // Declare a pointer to a directory.
     DIR *dir;
     // Try to open it.
@@ -175,7 +186,7 @@ DIR *openDirectory(char *path) {
         return dir;
     }
     // Print an error if failed and exit.
-    writeToScreen("Not a valid directory\n");
+    writeToScreen(errorMsg);
     exit(-1);
 }
 
@@ -315,8 +326,7 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd)
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
-    pid_t pid;
-    pid = fork();
+    pid_t pid = fork();
     // Validate no error occur.
     if (pid <= ERROR) {
         writeToScreen("Error in: fork\n");
@@ -341,11 +351,15 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd)
         }
         exit(1);
     } else {
-        wait(&status);
+        if (wait(&status) <= ERROR) {
+            writeToScreen("Error in: wait\n");
+            exit(-1);
+        }
     }
     // Return the status of execvp program who ran.
     return status;
 }
+
 
 /**
  * Given a path to a user directory, the function is traversing all files looking for a .c file.
@@ -356,22 +370,21 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd)
  */
 int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
     // Open the user's directory.
-    DIR *directory = opendir(pathToUserDir);
+    DIR *directory = openDirectory(pathToUserDir, "Error in opendir\n");
     struct dirent *entry;
     // Traverse all files inside it.
     while ((entry = readdir(directory)) != NULL) {
         if (entry->d_type == DT_REG && validC(entry->d_name)) {
             // Construct the full path of the entry.
-            strcpy(cFilePath, pathToUserDir);
-            strcat(cFilePath, "/");
-            strcat(cFilePath, entry->d_name);
+            char *args[] = {pathToUserDir, "/", entry->d_name, NULL};
+            constructPath(args, cFilePath);
             // found a .c file.
-            closedir(directory);
+            closeDirectory(directory);
             return 1;
         }
     }
     // Didn't find a .c file.
-    closedir(directory);
+    closeDirectory(directory);
     return 0;
 }
 
@@ -433,9 +446,9 @@ int runExecFile(int inputFd, char *userDirPath, int errorFd) {
 }
 
 /**
- *
- * @param dir
- * @param pathToDir
+ * Traversing the users directory and managing the compilation, execution and comparison of the users.
+ * @param dir A pointer to the directory of the users.
+ * @param pathToDir The path to the users directory.
  */
 void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outputPath, int resultsFd, int errorFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
@@ -500,7 +513,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
  * @param resultsFd The results.csv file descriptor.
  */
 void finishTheProgram(DIR *usersDir, int errorFd, int resultsFd) {
-    closedir(usersDir);
+    closeDirectory(usersDir);
     closeFile(errorFd);
     closeFile(resultsFd);
 }
@@ -528,7 +541,7 @@ int main(int argc, char *argv[]) {
     // Get the lines from the configuration file.
     readConfiguration(usersFolderPath, inputFilePath, outputFilePath, confFd);
     // Open the directory from the first line of the configuration file.
-    DIR *usersDir = openDirectory(usersFolderPath);
+    DIR *usersDir = openDirectory(usersFolderPath, "Not a valid directory\n");
     // Open the output file using the path we extracted from the configuration file.
     int outputFd = openOutputInput(outputFilePath, "Output file not exist\n");
     close(outputFd);
