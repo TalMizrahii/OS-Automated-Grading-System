@@ -14,17 +14,17 @@
 #define ONE_BYTE 1
 #define ALL_ACCESS 0777
 #define CHILD_PROCESS 0
+#define ERROR_RANGE 256
 #define IDENTICAL 1
 #define SIMILAR 3
 #define NON_EQUAL 2
-
 
 /**
  * A function to write to the default output (screen).
  * @param msg The message to print.
  */
 void writeToScreen(char *msg) {
-    if (write(STDOUT_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR) {
+    if (write(STDERR_FILENO, msg, strlen(msg) * sizeof(char)) <= ERROR) {
         exit(-1);
     }
 }
@@ -216,11 +216,6 @@ int createErrorFile() {
         writeToScreen("Error in: open\n");
         exit(-1);
     }
-    // Redirect stderr to the file descriptor of errors.txt.
-    if (dup2(errorFd, STDERR_FILENO) <= ERROR) {
-        writeToScreen("Error in: dup2\n");
-        exit(-1);
-    }
     return errorFd;
 }
 
@@ -287,22 +282,32 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
         writeToScreen("Error in: open\n");
         exit(-1);
     }
-    // Redirect the standard input and output.
-    dup2(inputFd, STDIN_FILENO);
-    dup2(testFd, STDOUT_FILENO);
+    // Redirect the standard input.
+    if (dup2(inputFd, STDIN_FILENO) <= ERROR) {
+        writeToScreen("Error in: dup2\n");
+        exit(-1);
+    }
+    // Redirect the standard output.
+    if(dup2(testFd, STDOUT_FILENO) <= ERROR){
+        writeToScreen("Error in: dup2\n");
+        exit(-1);
+    }
     // Return the file descriptor of the test file.
     return testFd;
 }
 
 /**
- *
- * @param pathToCFile
- * @param userDirPath
- * @param fullPathToExec
- * @param execName
- * @return
+ *  Executing a command with arguments using fork and execvp system calls.
+ *  The program make all errors regard to the execvp to be directed to errors.txt file.
+ *  In case of sending a path to a user directory, the function will redirect the standard
+ *  input to the inputFd sent to it.
+ * @param argumentList The arguments list of the function.
+ * @param inputFd The input file descriptor to be redirected (only if the userDirPath is not NULL!).
+ * @param userDirPath The path to the user's directory.
+ * @param errorFd The errors.txt file descriptor. All errors from the execvp will be redirected to it.
+ * @return The status of the execvp on success, EXIT_ERROR otherwise.
  */
-int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
+int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd) {
     // Create a status int to save the exit status of the child.
     int status;
     // Fork the process to execute the gcc command.
@@ -313,11 +318,17 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
         writeToScreen("Error in: fork\n");
         exit(-1);
     }
-    // If it;s the child process.
+    // If it's the child process.
     if (pid == CHILD_PROCESS) {
-        if (inputFd) {
+        // If the UserDirPath isn't null redirect the file descriptors and CWD.
+        if (userDirPath) {
             redirectComparisonFile(userDirPath, inputFd);
             chdir(userDirPath);
+        }
+        // Redirect stderr to the file descriptor of errors.txt.
+        if (dup2(errorFd, STDERR_FILENO) <= ERROR) {
+            writeToScreen("Error in: dup2\n");
+            exit(-1);
         }
         // Execute the compilation line.
         if (execvp(argumentList[0], argumentList) <= ERROR) {
@@ -328,10 +339,9 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath) {
     } else {
         wait(&status);
     }
-    // Check if the compilation phase succeeded. If so, return 1.
+    // Return the status of execvp program who ran.
     return status;
 }
-
 
 /**
  * Given a path to a user directory, the function is traversing all files looking for a .c file.
@@ -369,14 +379,14 @@ int findCFileInUsers(char *pathToUserDir, char *cFilePath) {
  * @param execName The name of the execution file.
  * @return The status of the compilation command.
  */
-int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName) {
+int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, char *execName, int errorFd) {
     // Creat a path to the execution file.
     char *args[] = {userDirPath, "/", execName, NULL};
     constructPath(args, fullPathToExec);
     // Create an arguments list to the executeVP function.
     char *argumentList[] = {"gcc", "-o", fullPathToExec, pathToCFile, NULL};
     // Compile the file.
-    return executeVP(argumentList, 0, NULL);
+    return executeVP(argumentList, 0, NULL, errorFd);
 }
 
 /**
@@ -386,11 +396,11 @@ int compileCFile(char *pathToCFile, char *userDirPath, char *fullPathToExec, cha
  * @param outputPath The path to the correct output file.
  * @return The return status of the execution.
  */
-int compareFiles(char *outputPath, char *fullPathToCompTxt) {
+int compareFiles(char *outputPath, char *fullPathToCompTxt, int errorFd) {
     // Construct an argument list for the execVP function to run.
     char *argumentList[] = {"./comp.out", fullPathToCompTxt, outputPath, NULL};
     // Return the result.
-    return executeVP(argumentList, 0, NULL);
+    return executeVP(argumentList, 0, NULL, errorFd);
 }
 
 /**
@@ -399,14 +409,14 @@ int compareFiles(char *outputPath, char *fullPathToCompTxt) {
  * @param userDirPath The path to the user's directory.
  * @return The return value of the a.out program
  */
-int runExecFile(int inputFd, char *userDirPath) {
+int runExecFile(int inputFd, char *userDirPath, int errorFd) {
     // Create an argument list for the executeVP command.
     char *args[] = {"./a.out", NULL};
     // Check the time it takes to run the program. Set the start time to start.
     clock_t start;
     time(&start);
     // Run the program using the executeVP command and return it's return value.
-    executeVP(args, inputFd, userDirPath);
+    executeVP(args, inputFd, userDirPath, errorFd);
     // Set the end time of the running to end.
     clock_t end;
     time(&end);
@@ -423,7 +433,7 @@ int runExecFile(int inputFd, char *userDirPath) {
  * @param dir
  * @param pathToDir
  */
-void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outputPath, int resultsFd) {
+void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outputPath, int resultsFd, int errorFd) {
     // Initiate a dirnet to store the data on each file in the directory to traverse.
     struct dirent *entry;
     // go over all files in the directory.
@@ -445,7 +455,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
             continue;
         }
         char fullPathToExec[MAX_PATH] = {0};
-        if (compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out")) {
+        if (compileCFile(cFilePath, userDirPath, fullPathToExec, "a.out", errorFd)) {
             // If the compilation didn't work, write the result to the results.txt file and go to the next user.
             writeToResults(resultsFd, entry->d_name, "10", "COMPILATION_ERROR");
             continue;
@@ -457,7 +467,7 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
         char *args[] = {userDirPath, "/testComp.txt", NULL};
         constructPath(args, fullPathToCompTxt);
         // Run the users execution file.
-        int runResult = runExecFile(inputFd, userDirPath);
+        int runResult = runExecFile(inputFd, userDirPath, errorFd);
         // Delete the execution file.
         remove(fullPathToExec);
         // Close the input file to restore the file descriptor.
@@ -471,11 +481,11 @@ void traverseUsersDir(DIR *dir, char *pathToDir, char *inputFilePath, char *outp
             continue;
         }
         // Create args list to execute the compare program.
-        int status = compareFiles(outputPath, fullPathToCompTxt);
+        int status = compareFiles(outputPath, fullPathToCompTxt, errorFd);
         // Remove the test file.
         remove(fullPathToCompTxt);
         // Write the result to the results.txt file.
-        writeToResultsAfterRun(status / 256, resultsFd, entry->d_name);
+        writeToResultsAfterRun(status / ERROR_RANGE, resultsFd, entry->d_name);
     }
 }
 
@@ -490,6 +500,8 @@ void finishTheProgram(DIR *usersDir, int errorFd, int resultsFd) {
     closeFile(errorFd);
     closeFile(resultsFd);
 }
+
+
 
 /**
  * The main function. Responsible to process the configuration file received via argument,
@@ -519,12 +531,11 @@ int main(int argc, char *argv[]) {
     close(outputFd);
     // Create result file named results.csv.
     int resultsFd = createResultFile();
-    // Compile the ex21.c file to comp.out.
-    char compFilePath[MAX_PATH] = {0};
-    // Compile the program ex21.c to comp.out.
-    compileCFile("ex21.c", ".", compFilePath, "comp.out");
+    // Compile the program ex21.c to comp.out. Kept in comment only if any use will be necessary
+    //char compFilePath[MAX_PATH] = {0};
+    //compileCFile("ex21.c", ".", compFilePath, "comp.out");
     // Travers the users directories and grade them.
-    traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd);
+    traverseUsersDir(usersDir, usersFolderPath, inputFilePath, outputFilePath, resultsFd, errorFd);
     // Finish the program smoothly by releasing all allocated data.
     finishTheProgram(usersDir, errorFd, resultsFd);
     return 0;
