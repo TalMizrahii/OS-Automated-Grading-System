@@ -135,13 +135,19 @@ void readToLine(char *line, int fd) {
         writeToScreen("Error in: read\n");
         exit(-1);
     }
+    // In initiate a counter for the char placing index.
+    int index = 0;
     // While the char isn't a new line char or EOF, concatenate the char to the line string.
     while (ch != '\n' && ch != EOF) {
-        strcat(line, &ch);
+        // Set the char to it's index in the line.
+        line[index] = ch;
+        // Read another char.
         if (read(fd, &ch, ONE_BYTE) <= ERROR) {
             writeToScreen("Error in: read\n");
             exit(-1);
         }
+        // Raise the index to the next location.
+        index++;
     }
 }
 
@@ -288,7 +294,7 @@ int redirectComparisonFile(char *userDirPath, int inputFd) {
         exit(-1);
     }
     // Redirect the standard output.
-    if(dup2(testFd, STDOUT_FILENO) <= ERROR){
+    if (dup2(testFd, STDOUT_FILENO) <= ERROR) {
         writeToScreen("Error in: dup2\n");
         exit(-1);
     }
@@ -500,7 +506,6 @@ void finishTheProgram(DIR *usersDir, int errorFd, int resultsFd) {
     closeFile(errorFd);
     closeFile(resultsFd);
 }
-
 
 
 /**
