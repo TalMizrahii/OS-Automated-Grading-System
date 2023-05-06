@@ -40,10 +40,8 @@ cd OS-Automated-Grading-System
  gcc -o comp.out ex21.c
 ```
 This command will create comp.out. file. I added a test file to this repo that you can test the program on.
-
-
-
   
+
 ## Part 2 - 
 ### About
 
