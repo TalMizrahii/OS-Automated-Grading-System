@@ -1,6 +1,6 @@
 <h1 align="center">
 <br>
-  <a href="https://github.com/TalMizrahii/OS-Automated-Grading-System"><img src="https://www.codelivly.com/wp-content/uploads/2023/01/bash.jpg" alt="HTML" width="200"></a>
+  <a href="https://github.com/TalMizrahii/OS-Automated-Grading-System"><img src="https://logodownload.org/wp-content/uploads/2022/05/linux-logo-1.png" alt="HTML" width="200"></a>
   <br>
   Operating Systems
   <br>
