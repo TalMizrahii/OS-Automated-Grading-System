@@ -343,7 +343,10 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd)
         }
         exit(1);
     } else {
-        wait(&status);
+        if (wait(&status) <= ERROR) {
+            writeToScreen("Error in: wait\n");
+            exit(-1);
+        }
     }
     // Return the status of execvp program who ran.
     return status;
