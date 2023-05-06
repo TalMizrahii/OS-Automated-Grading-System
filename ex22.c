@@ -234,7 +234,6 @@ int createErrorFile() {
     return errorFd;
 }
 
-
 /**
  * Checking if a file is a valid .c file.
  * @param fileName The file's name.
@@ -249,7 +248,6 @@ int validC(char *fileName) {
     // It's not a .c file.
     return 0;
 }
-
 
 /**
  * Writing the result after testing the result files.
@@ -359,7 +357,6 @@ int executeVP(char *argumentList[], int inputFd, char *userDirPath, int errorFd)
     // Return the status of execvp program who ran.
     return status;
 }
-
 
 /**
  * Given a path to a user directory, the function is traversing all files looking for a .c file.
@@ -517,7 +514,6 @@ void finishTheProgram(DIR *usersDir, int errorFd, int resultsFd) {
     closeFile(errorFd);
     closeFile(resultsFd);
 }
-
 
 /**
  * The main function. Responsible to process the configuration file received via argument,

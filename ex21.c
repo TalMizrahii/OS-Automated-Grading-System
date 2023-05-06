@@ -9,7 +9,6 @@
 #define SIMILAR 3
 #define NON_EQUAL 2
 
-
 /**
  * An "strlen" like function to get the value of a string in chars.
  * @param str The string to evaluate.
@@ -24,7 +23,6 @@ int strLength(const char *str) {
     }
     return count;
 }
-
 
 /**
  * A "perror" like function to write to the Standard error (diagnostic) output.
@@ -140,7 +138,6 @@ int similar(int fd1, int fd2) {
     // If the loop ended but the files not, the files are not similar.
     return 0;
 }
-
 
 /**
  * Checking if both filed are identical.
