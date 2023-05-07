@@ -30,17 +30,38 @@ To clone and run this program, you'll need [Git](https://git-scm.com) installed 
 ```bash
 git clone https://github.com/TalMizrahii/OS-Automated-Grading-System
 ```
-// Go into the repository.
+// Go into the repository:
 ```bash
 cd OS-Automated-Grading-System
 ```
 
-// Compile.
+// Compile:
 ```bash
  gcc -o comp.out ex21.c
 ```
-This command will create comp.out. file. I added a test file to this repo that you can test the program on.
-  
+
+// For identical check:
+```bash
+ ./comp.out textComparison/identical/ross/ross1.txt textComparison/identical/ross/ross2.txt
+```
+
+
+// For similar check:
+```bash
+ ./comp.out textComparison/similar/moo/joey1.txt textComparison/similar/moo/joey2.txt
+```
+
+
+// For different check:
+```bash
+ ./comp.out textComparison/different/french/joey.txt textComparison/different/french/phoebe.txt
+```
+
+//To observe the return value you can execute:  
+// For different check:
+```bash
+ echo $?
+```
 
 ## Part 2 - 
 ### About
