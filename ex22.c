@@ -158,6 +158,7 @@ void readToLine(char *line, int fd) {
         // Raise the index to the next location.
         index++;
     }
+    line[index] = '\0';
 }
 
 /**
