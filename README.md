@@ -58,7 +58,6 @@ cd OS-Automated-Grading-System
 ```
 
 //To observe the return value you can execute:  
-// For different check:
 ```bash
  echo $?
 ```
