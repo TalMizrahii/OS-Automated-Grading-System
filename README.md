@@ -19,6 +19,11 @@ The identical() function reads both files byte by byte and compares them. If the
 
 The similar() function reads both files byte by byte and compares them while ignoring any white space characters. If the files are similar, the function returns 3; if they are not similar, it returns 2. If the two files have reached their end simultaneously, the function returns 1, indicating that the files are at least similar.
 
+An example of similar files:
+
+<img width="82" alt="sim" src="https://user-images.githubusercontent.com/103560553/236671190-cc0862ee-1638-47be-9a61-a3db36c35639.PNG">
+
+
 The strLength() function calculates the length of a given string, and the errorPrint() function writes an error message to the standard error output. The closeFiles() function closes two files, and the openFile() function opens a file for reading.
 
 The code uses several system calls and standard library functions, including read(), write(), close(), open(), exit(), and sizeof().
@@ -64,12 +69,32 @@ cd OS-Automated-Grading-System
 
 ## Part 2 - Automated Grading System.
 ### About
-The second part of the assignment is to create an automated grading system. The system receives a configuration file as an argument, which contains three lines. The first line is a path to a directory of students, the second is a path to an input file, and the last line is a path to an output file. The system processes the file by traversing all directories (up to depth 1 only) in the students directory and checks the .c files inside each student directory. The system redirects the default input (file descriptor 1) to the file from line 2 in the configuration file and redirects the standard output file descriptor to a new test file in the student directory. Then, the program executes the code from part 1 (comp.out) and compares the output of the student to the correct output file given in line 3 of the configuration file. If any errors occurred during the run of the student file, the system redirects them to a new errors.txt file in its current working directory. The results and grading of the students are saved in a new file called results.csv.
+The second part of the assignment is to create an automated grading system. The system receives a configuration file as an argument, which contains three lines.
+
+<img width="305" alt="4" src="https://user-images.githubusercontent.com/103560553/236671229-77b2e700-54bc-489a-8499-4e9d026776e4.PNG">
+
+ The first line is a path to a directory of students, the second is a path to an input file, and the last line is a path to an output file. The system processes the file by traversing all directories (up to depth 1 only) in the students directory and checks the .c files inside each student directory.
+
+<img width="363" alt="33" src="https://user-images.githubusercontent.com/103560553/236671343-1e5e14bd-eba1-4418-84be-d242db4deb82.PNG">
+
+
+ The system redirects the default input (file descriptor 1) to the file from line 2 in the configuration file and redirects the standard output file descriptor to a new test file in the student directory. Then, the program executes the code from part 1 (comp.out) and compares the output of the student to the correct output file given in line 3 of the configuration file. If any errors occurred during the run of the student file, the system redirects them to a new errors.txt file in its current working directory.
+ 
+ 
+ <img width="690" alt="2" src="https://user-images.githubusercontent.com/103560553/236671306-e3629bfd-fd36-4232-94d8-8e7e35eafcc0.PNG">
+
+
+ The results and grading of the students are saved in a new file called results.csv.
+ 
+ <img width="531" alt="1" src="https://user-images.githubusercontent.com/103560553/236671287-5446da20-ceff-4499-8896-38d68877dde8.PNG">
+
 
 ### Implementation
 The main function reads the command-line arguments and calls several other functions to carry out the grading process. The finishTheProgram() function is responsible for closing any opened file descriptors, while traverseUsersDir() is responsible for traversing each student directory and grading their C program.
 
 There are several helper functions in the program, such as argNumCheck(), createErrorFile(), openFilePath(), openOutputInput(), and createResultFile(). These functions are used to perform basic error checking, open files, and create files.
+
+The system deltes all files created during it's execution, including the students executables and test files. The only files it doesn't delete are the errors.txt and results.csv.
 
 The program uses several system calls, such as open(), read(), write(), mkdir(), chdir(), execvp(), and remove(). It also uses several standard library functions, such as strcmp(), sprintf(), strcat(), clock(), time(), and rewinddir().
 
